@@ -1,0 +1,53 @@
+---
+alwaysApply: true
+---
+
+# Project Structure Guidelines
+
+The project should follow this structure:
+
+```
+fitness-rag/
+├── config/
+│   ├── model_config.yaml      # Model and training configurations
+│   └── inference_config.yaml  # Inference configurations
+├── src/
+│   ├── models/               # Model architectures
+│   ├── data/                 # Data loading and processing
+│   ├── training/             # Training loops and utilities
+│   ├── inference/            # Inference pipelines
+│   └── utils/                # Helper functions
+├── notebooks/                # Jupyter notebooks for experiments
+├── scripts/                  # Training and inference scripts
+├── tests/                    # Unit tests
+└── gradio_app/              # Gradio interface
+```
+
+Each Python module should have a clear single responsibility and follow object-oriented or functional programming paradigms as appropriate.
+
+---
+
+# Project Structure Guidelines
+
+The project should follow this structure:
+
+```
+fitness-rag/
+├── config/
+│   ├── model_config.yaml      # Model and training configurations
+│   └── inference_config.yaml  # Inference configurations
+├── src/
+│   ├── models/               # Model architectures
+│   ├── data/                 # Data loading and processing
+│   ├── training/             # Training loops and utilities
+│   ├── inference/            # Inference pipelines
+│   └── utils/                # Helper functions
+├── notebooks/                # Jupyter notebooks for experiments
+├── scripts/                  # Training and inference scripts
+├── tests/                    # Unit tests
+└── gradio_app/              # Gradio interface
+```
+
+Each Python module should have a clear single responsibility and follow object-oriented or functional programming paradigms as appropriate.
+
+---

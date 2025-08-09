@@ -1,0 +1,197 @@
+---
+alwaysApply: true
+---
+
+# Gradio Interface Guidelines
+
+1. Interface Structure:
+   - Separate interface logic from model inference
+   - Implement proper error handling
+   - Use appropriate input/output components
+   - Implement loading states and progress bars
+
+Example:
+
+```python
+import gradio as gr
+from typing import Dict, Any
+from pathlib import Path
+
+class ModelInterface:
+    def __init__(self, model_path: Path):
+        self.model = self.load_model(model_path)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def load_model(self, model_path: Path) -> nn.Module:
+        """Load and prepare model for inference."""
+        try:
+            model = torch.load(model_path, map_location=self.device)
+            model.eval()
+            return model
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model: {e}")
+
+    def predict(self, input_text: str) -> Dict[str, Any]:
+        """Process input and return predictions."""
+        try:
+            # Input validation
+            if not input_text.strip():
+                raise ValueError("Input text cannot be empty")
+
+            # Model inference
+            with torch.no_grad():
+                result = self.model.generate(input_text)
+
+            return {
+                "generated_text": result,
+                "status": "success"
+            }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status": "error"
+            }
+
+def create_interface(model_path: Path) -> gr.Interface:
+    """Create and configure Gradio interface."""
+    interface = ModelInterface(model_path)
+
+    return gr.Interface(
+        fn=interface.predict,
+        inputs=[
+            gr.Textbox(
+                label="Input Text",
+                placeholder="Enter your text here..."
+            )
+        ],
+        outputs=[
+            gr.Textbox(label="Generated Output"),
+            gr.JSON(label="Additional Info")
+        ],
+        title="Model Demo",
+        description="Enter text to generate predictions",
+        examples=[
+            ["Example input 1"],
+            ["Example input 2"]
+        ],
+        cache_examples=True
+    )
+
+if __name__ == "__main__":
+    demo = create_interface(Path("models/latest.pt"))
+    demo.launch(share=True)
+```
+
+2. Best Practices:
+
+   - Use type hints for all functions
+   - Implement proper error messages and user feedback
+   - Use examples to demonstrate functionality
+   - Implement proper input validation
+   - Use appropriate component types for inputs/outputs
+   - Include loading states for long-running operations
+
+3. Security:
+   - Validate and sanitize all inputs
+   - Implement rate limiting if needed
+   - Handle sensitive information appropriately
+   - Implement proper authentication if required
+
+---
+
+# Gradio Interface Guidelines
+
+1. Interface Structure:
+   - Separate interface logic from model inference
+   - Implement proper error handling
+   - Use appropriate input/output components
+   - Implement loading states and progress bars
+
+Example:
+
+```python
+import gradio as gr
+from typing import Dict, Any
+from pathlib import Path
+
+class ModelInterface:
+    def __init__(self, model_path: Path):
+        self.model = self.load_model(model_path)
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+    def load_model(self, model_path: Path) -> nn.Module:
+        """Load and prepare model for inference."""
+        try:
+            model = torch.load(model_path, map_location=self.device)
+            model.eval()
+            return model
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model: {e}")
+
+    def predict(self, input_text: str) -> Dict[str, Any]:
+        """Process input and return predictions."""
+        try:
+            # Input validation
+            if not input_text.strip():
+                raise ValueError("Input text cannot be empty")
+
+            # Model inference
+            with torch.no_grad():
+                result = self.model.generate(input_text)
+
+            return {
+                "generated_text": result,
+                "status": "success"
+            }
+        except Exception as e:
+            return {
+                "error": str(e),
+                "status": "error"
+            }
+
+def create_interface(model_path: Path) -> gr.Interface:
+    """Create and configure Gradio interface."""
+    interface = ModelInterface(model_path)
+
+    return gr.Interface(
+        fn=interface.predict,
+        inputs=[
+            gr.Textbox(
+                label="Input Text",
+                placeholder="Enter your text here..."
+            )
+        ],
+        outputs=[
+            gr.Textbox(label="Generated Output"),
+            gr.JSON(label="Additional Info")
+        ],
+        title="Model Demo",
+        description="Enter text to generate predictions",
+        examples=[
+            ["Example input 1"],
+            ["Example input 2"]
+        ],
+        cache_examples=True
+    )
+
+if __name__ == "__main__":
+    demo = create_interface(Path("models/latest.pt"))
+    demo.launch(share=True)
+```
+
+2. Best Practices:
+
+   - Use type hints for all functions
+   - Implement proper error messages and user feedback
+   - Use examples to demonstrate functionality
+   - Implement proper input validation
+   - Use appropriate component types for inputs/outputs
+   - Include loading states for long-running operations
+
+3. Security:
+   - Validate and sanitize all inputs
+   - Implement rate limiting if needed
+   - Handle sensitive information appropriately
+   - Implement proper authentication if required
+
+---

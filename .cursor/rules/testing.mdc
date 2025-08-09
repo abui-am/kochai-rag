@@ -1,0 +1,215 @@
+---
+alwaysApply: false
+---
+
+# Testing and Evaluation Guidelines
+
+1. Test Structure:
+   - Use pytest for testing
+   - Organize tests by component/functionality
+   - Use fixtures for common setup
+   - Implement proper test isolation
+
+Example:
+
+```python
+import pytest
+import torch
+from pathlib import Path
+from typing import Dict, Generator
+
+@pytest.fixture
+def model_config() -> Dict[str, Any]:
+    """Fixture for model configuration."""
+    return {
+        "vocab_size": 1000,
+        "hidden_size": 256,
+        "num_layers": 4,
+        "num_heads": 8
+    }
+
+@pytest.fixture
+def test_model(model_config: Dict[str, Any]) -> Generator[nn.Module, None, None]:
+    """Fixture for creating a test model instance."""
+    model = TransformerModel(**model_config)
+    model.eval()
+    yield model
+    # Cleanup if needed
+    del model
+    torch.cuda.empty_cache()
+
+class TestTransformerModel:
+    def test_model_initialization(self, test_model: nn.Module):
+        """Test model initialization and configuration."""
+        assert isinstance(test_model, nn.Module)
+        assert hasattr(test_model, "config")
+
+    def test_forward_pass(self, test_model: nn.Module):
+        """Test model forward pass with various input sizes."""
+        batch_sizes = [1, 4, 8]
+        seq_lengths = [10, 20]
+
+        for batch_size in batch_sizes:
+            for seq_len in seq_lengths:
+                input_ids = torch.randint(
+                    0, 1000,
+                    (batch_size, seq_len)
+                )
+
+                with torch.no_grad():
+                    output = test_model(input_ids)
+
+                assert isinstance(output, dict)
+                assert "logits" in output
+                assert output["logits"].shape == (
+                    batch_size,
+                    seq_len,
+                    test_model.config["vocab_size"]
+                )
+
+    @pytest.mark.parametrize(
+        "invalid_input",
+        [
+            torch.randn(2, 3, 4),  # Wrong dimensions
+            torch.tensor([]),      # Empty tensor
+        ]
+    )
+    def test_invalid_inputs(
+        self,
+        test_model: nn.Module,
+        invalid_input: torch.Tensor
+    ):
+        """Test model behavior with invalid inputs."""
+        with pytest.raises(ValueError):
+            test_model(invalid_input)
+```
+
+2. Testing Best Practices:
+
+   - Write tests for all critical functionality
+   - Use parametrized tests for multiple test cases
+   - Test edge cases and error conditions
+   - Implement proper cleanup in fixtures
+   - Use appropriate assertions and error messages
+
+3. Model Evaluation:
+
+   - Implement standard metrics for your task
+   - Use proper evaluation datasets
+   - Test model performance and efficiency
+   - Validate model outputs
+   - Profile memory usage and runtime
+
+4. Integration Testing:
+   - Test full pipelines end-to-end
+   - Validate data processing steps
+   - Test model saving/loading
+   - Validate Gradio interface functionality
+
+---
+
+# Testing and Evaluation Guidelines
+
+1. Test Structure:
+   - Use pytest for testing
+   - Organize tests by component/functionality
+   - Use fixtures for common setup
+   - Implement proper test isolation
+
+Example:
+
+```python
+import pytest
+import torch
+from pathlib import Path
+from typing import Dict, Generator
+
+@pytest.fixture
+def model_config() -> Dict[str, Any]:
+    """Fixture for model configuration."""
+    return {
+        "vocab_size": 1000,
+        "hidden_size": 256,
+        "num_layers": 4,
+        "num_heads": 8
+    }
+
+@pytest.fixture
+def test_model(model_config: Dict[str, Any]) -> Generator[nn.Module, None, None]:
+    """Fixture for creating a test model instance."""
+    model = TransformerModel(**model_config)
+    model.eval()
+    yield model
+    # Cleanup if needed
+    del model
+    torch.cuda.empty_cache()
+
+class TestTransformerModel:
+    def test_model_initialization(self, test_model: nn.Module):
+        """Test model initialization and configuration."""
+        assert isinstance(test_model, nn.Module)
+        assert hasattr(test_model, "config")
+
+    def test_forward_pass(self, test_model: nn.Module):
+        """Test model forward pass with various input sizes."""
+        batch_sizes = [1, 4, 8]
+        seq_lengths = [10, 20]
+
+        for batch_size in batch_sizes:
+            for seq_len in seq_lengths:
+                input_ids = torch.randint(
+                    0, 1000,
+                    (batch_size, seq_len)
+                )
+
+                with torch.no_grad():
+                    output = test_model(input_ids)
+
+                assert isinstance(output, dict)
+                assert "logits" in output
+                assert output["logits"].shape == (
+                    batch_size,
+                    seq_len,
+                    test_model.config["vocab_size"]
+                )
+
+    @pytest.mark.parametrize(
+        "invalid_input",
+        [
+            torch.randn(2, 3, 4),  # Wrong dimensions
+            torch.tensor([]),      # Empty tensor
+        ]
+    )
+    def test_invalid_inputs(
+        self,
+        test_model: nn.Module,
+        invalid_input: torch.Tensor
+    ):
+        """Test model behavior with invalid inputs."""
+        with pytest.raises(ValueError):
+            test_model(invalid_input)
+```
+
+2. Testing Best Practices:
+
+   - Write tests for all critical functionality
+   - Use parametrized tests for multiple test cases
+   - Test edge cases and error conditions
+   - Implement proper cleanup in fixtures
+   - Use appropriate assertions and error messages
+
+3. Model Evaluation:
+
+   - Implement standard metrics for your task
+   - Use proper evaluation datasets
+   - Test model performance and efficiency
+   - Validate model outputs
+   - Profile memory usage and runtime
+
+4. Integration Testing:
+   - Test full pipelines end-to-end
+   - Validate data processing steps
+   - Test model saving/loading
+   - Validate Gradio interface functionality
+
+---

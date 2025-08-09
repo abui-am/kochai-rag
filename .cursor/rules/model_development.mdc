@@ -1,0 +1,163 @@
+---
+alwaysApply: true
+---
+
+# Model Development Guidelines
+
+1. Model Architecture:
+   - Inherit from torch.nn.Module
+   - Implement forward() method with type hints
+   - Use proper weight initialization
+   - Implement proper device management
+
+Example:
+
+```python
+import torch
+import torch.nn as nn
+from typing import Optional, Dict
+
+class TransformerModel(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_size: int,
+        num_layers: int,
+        num_heads: int,
+        dropout: float = 0.1
+    ):
+        super().__init__()
+        self.config = {
+            "vocab_size": vocab_size,
+            "hidden_size": hidden_size,
+            "num_layers": num_layers,
+            "num_heads": num_heads,
+            "dropout": dropout
+        }
+
+        # Initialize layers
+        self.embedding = nn.Embedding(vocab_size, hidden_size)
+        self.transformer = nn.TransformerEncoder(...)
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+        """Initialize model weights using appropriate initialization."""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None
+    ) -> Dict[str, torch.Tensor]:
+        """Forward pass of the model.
+
+        Args:
+            input_ids: Tensor of shape (batch_size, seq_len)
+            attention_mask: Optional mask of shape (batch_size, seq_len)
+
+        Returns:
+            Dictionary containing:
+                - logits: Output logits
+                - hidden_states: Intermediate representations
+        """
+        # Implementation
+```
+
+2. Training Setup:
+
+   - Use torch.cuda.amp for mixed precision training
+   - Implement gradient clipping
+   - Use appropriate learning rate scheduling
+   - Implement proper checkpoint saving/loading
+
+3. Performance Optimization:
+   - Use torch.compile() for PyTorch 2.0+ optimization
+   - Implement proper batching and prefetching
+   - Use torch.distributed for multi-GPU training
+   - Profile memory usage and optimize where needed
+
+---
+
+# Model Development Guidelines
+
+1. Model Architecture:
+   - Inherit from torch.nn.Module
+   - Implement forward() method with type hints
+   - Use proper weight initialization
+   - Implement proper device management
+
+Example:
+
+```python
+import torch
+import torch.nn as nn
+from typing import Optional, Dict
+
+class TransformerModel(nn.Module):
+    def __init__(
+        self,
+        vocab_size: int,
+        hidden_size: int,
+        num_layers: int,
+        num_heads: int,
+        dropout: float = 0.1
+    ):
+        super().__init__()
+        self.config = {
+            "vocab_size": vocab_size,
+            "hidden_size": hidden_size,
+            "num_layers": num_layers,
+            "num_heads": num_heads,
+            "dropout": dropout
+        }
+
+        # Initialize layers
+        self.embedding = nn.Embedding(vocab_size, hidden_size)
+        self.transformer = nn.TransformerEncoder(...)
+        self.initialize_weights()
+
+    def initialize_weights(self) -> None:
+        """Initialize model weights using appropriate initialization."""
+        for module in self.modules():
+            if isinstance(module, nn.Linear):
+                nn.init.xavier_uniform_(module.weight)
+                if module.bias is not None:
+                    nn.init.zeros_(module.bias)
+
+    def forward(
+        self,
+        input_ids: torch.Tensor,
+        attention_mask: Optional[torch.Tensor] = None
+    ) -> Dict[str, torch.Tensor]:
+        """Forward pass of the model.
+
+        Args:
+            input_ids: Tensor of shape (batch_size, seq_len)
+            attention_mask: Optional mask of shape (batch_size, seq_len)
+
+        Returns:
+            Dictionary containing:
+                - logits: Output logits
+                - hidden_states: Intermediate representations
+        """
+        # Implementation
+```
+
+2. Training Setup:
+
+   - Use torch.cuda.amp for mixed precision training
+   - Implement gradient clipping
+   - Use appropriate learning rate scheduling
+   - Implement proper checkpoint saving/loading
+
+3. Performance Optimization:
+   - Use torch.compile() for PyTorch 2.0+ optimization
+   - Implement proper batching and prefetching
+   - Use torch.distributed for multi-GPU training
+   - Profile memory usage and optimize where needed
+
+---

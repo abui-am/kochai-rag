@@ -1,0 +1,141 @@
+---
+alwaysApply: false
+---
+
+# Python Code Style Guidelines
+
+1. Follow PEP 8 conventions:
+
+   - Use 4 spaces for indentation
+   - Maximum line length of 88 characters (Black formatter standard)
+   - Use snake_case for functions and variables
+   - Use PascalCase for class names
+   - Use UPPERCASE for constants
+
+2. Imports should be organized in the following order:
+
+   ```python
+   # Standard library imports
+   import os
+   import sys
+
+   # Third-party imports
+   import torch
+   import transformers
+   import diffusers
+
+   # Local imports
+   from .models import MyModel
+   from .utils import setup_logger
+   ```
+
+3. Type Hints:
+
+   - Use type hints for function arguments and return values
+   - Use Optional[] for nullable types
+   - Use Union[] for multiple possible types
+
+4. Docstrings:
+   - Use Google-style docstrings
+   - Include Args, Returns, and Raises sections
+   - Provide examples for complex functions
+
+Example:
+
+```python
+from typing import Optional, Tuple
+
+def process_batch(
+    input_ids: torch.Tensor,
+    attention_mask: Optional[torch.Tensor] = None,
+    *,
+    device: str = "cuda"
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Process a batch of input tokens.
+
+    Args:
+        input_ids: Input token IDs of shape (batch_size, seq_len)
+        attention_mask: Optional attention mask of shape (batch_size, seq_len)
+        device: Target device for computation
+
+    Returns:
+        Tuple containing:
+            - Processed embeddings (batch_size, seq_len, hidden_dim)
+            - Attention weights (batch_size, num_heads, seq_len, seq_len)
+
+    Raises:
+        ValueError: If input_ids dimensions are invalid
+    """
+    # Implementation
+```
+
+---
+
+# Python Code Style Guidelines
+
+1. Follow PEP 8 conventions:
+
+   - Use 4 spaces for indentation
+   - Maximum line length of 88 characters (Black formatter standard)
+   - Use snake_case for functions and variables
+   - Use PascalCase for class names
+   - Use UPPERCASE for constants
+
+2. Imports should be organized in the following order:
+
+   ```python
+   # Standard library imports
+   import os
+   import sys
+
+   # Third-party imports
+   import torch
+   import transformers
+   import diffusers
+
+   # Local imports
+   from .models import MyModel
+   from .utils import setup_logger
+   ```
+
+3. Type Hints:
+
+   - Use type hints for function arguments and return values
+   - Use Optional[] for nullable types
+   - Use Union[] for multiple possible types
+
+4. Docstrings:
+   - Use Google-style docstrings
+   - Include Args, Returns, and Raises sections
+   - Provide examples for complex functions
+
+Example:
+
+```python
+from typing import Optional, Tuple
+
+def process_batch(
+    input_ids: torch.Tensor,
+    attention_mask: Optional[torch.Tensor] = None,
+    *,
+    device: str = "cuda"
+) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Process a batch of input tokens.
+
+    Args:
+        input_ids: Input token IDs of shape (batch_size, seq_len)
+        attention_mask: Optional attention mask of shape (batch_size, seq_len)
+        device: Target device for computation
+
+    Returns:
+        Tuple containing:
+            - Processed embeddings (batch_size, seq_len, hidden_dim)
+            - Attention weights (batch_size, num_heads, seq_len, seq_len)
+
+    Raises:
+        ValueError: If input_ids dimensions are invalid
+    """
+    # Implementation
+```
+
+---

@@ -1,0 +1,37 @@
+{
+  "raw_data": {
+    "pdfs": {
+      "40772661_doi.pdf": {
+        "type": "research_paper",
+        "format": "pdf",
+        "size": "1.1MB"
+      },
+      "40755942_pmc_alt.pdf": {
+        "type": "research_paper",
+        "format": "pdf",
+        "size": "133KB",
+        "lines": 620
+      },
+      "40677623_pmc_alt.pdf": {
+        "type": "research_paper",
+        "format": "pdf",
+        "size": "316KB",
+        "lines": 2199
+      }
+    }
+  },
+  "processed_data": {
+    "summaries": {
+      "format": "txt",
+      "count": 38,
+      "topics": [
+        "fitness",
+        "exercise",
+        "health",
+        "medical",
+        "research"
+      ]
+    }
+  },
+  "last_updated": "2024-03-21"
+} 
