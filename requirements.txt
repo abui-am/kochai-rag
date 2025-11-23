@@ -12,3 +12,4 @@ pydantic[email]
 aiosqlite
 argon2-cffi
 greenlet
+fhlmi==0.40.0

@@ -14,6 +14,7 @@ from openai import AsyncOpenAI
 from api.auth_utils import User, get_current_user, create_access_token, authenticate_user
 from api.auth_utils import SECRET_KEY, ALGORITHM
 import jwt
+from paperqa.agents.models import AgentStatus
 from api.database import (
     UserDB, init_db, create_user_from_registration, get_user_by_email,
     get_user_by_id, update_user_profile, update_user_preferences,
@@ -414,8 +415,9 @@ async def query(
         agent_prefs = db_prefs;
         # Execute the query using PaperQA
         result = await system.query(request.question, preferences=agent_prefs)
-        
-        if result.session.raw_answer:         
+
+        # Check if query was successful and has an answer
+        if result.status == AgentStatus.SUCCESS and result.session.raw_answer:
             return {
                 "answer": result.session.raw_answer,
                 "context": result.session.context,
@@ -428,7 +430,10 @@ async def query(
             }
 
         else:
-            error_msg = result.get("error", "Unknown error occurred during query processing")
+            # Handle failed or empty response
+            error_msg = f"Query failed with status: {result.status}"
+            if result.session.raw_answer:
+                error_msg += f" - Response: {result.session.raw_answer}"
             raise HTTPException(
                 status_code=500,
                 detail=f"Query processing failed: {error_msg}"

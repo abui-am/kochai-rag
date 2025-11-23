@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 
 from paperqa import  ask, Settings
 from paperqa.agents.search import get_directory_index
-from paperqa.agents.models import AnswerResponse
+from paperqa.agents.models import AnswerResponse, PQASession, AgentStatus
 from openai import OpenAI
 from paperqa.prompts import CANNOT_ANSWER_PHRASE, CITATION_KEY_CONSTRAINTS, select_paper_prompt
 
@@ -18,19 +18,6 @@ from rag import settings as rag_settings
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-import litellm
-
-# Register your custom model
-litellm.register_model({
-    "ft:gpt-4o-mini-2024-07-18::indo-conversational:CbsQZjOu": {
-        "mode": "chat",  # Add the missing 'mode' field
-        "input_cost_per_token": 0.00015,
-        "output_cost_per_token": 0.0006,
-        "max_tokens": 128000,
-        "provider": "openai"
-    }
-})
 
 class FitnessKnowledgeSystem:
     """Simple fitness knowledge system using PaperQA with startup indexing and pickle caching."""
@@ -107,7 +94,7 @@ class FitnessKnowledgeSystem:
 
         # QA prompt from rag.settings
         settings.prompts.qa = rag_settings.get_qa_prompt_v2(user_preferences=agent_prefs)
-
+        settings.verbosity = 3
         logger.info("Settings created with agent_prefs: %s", agent_prefs)
         return settings
     
@@ -168,25 +155,25 @@ class FitnessKnowledgeSystem:
                 if not await self.ensure_index_ready():
                     logger.warning("Index not ready, falling back to vanilla response")
                     return AnswerResponse(
-                        answer='',
-                        context='',
-                        sources=[],
-                        response=None
+                        session=PQASession(question=question, raw_answer='', context=''),
+                        status=AgentStatus.FAIL
                     )
-                
+
                 settings = self._create_settings(agent_prefs=preferences)
-            
-            rag_answer:AnswerResponse = await ask(question, settings=settings)
-         
-            return rag_answer
+                rag_answer:AnswerResponse = await ask(question, settings=settings)
+                return rag_answer
+            else:
+                # No documents available, return empty response
+                return AnswerResponse(
+                    session=PQASession(question=question, raw_answer='', context=''),
+                    status=AgentStatus.FAIL
+                )
             
         except Exception as e:
             logger.error(f"Error processing query: {e}")
             return AnswerResponse(
-                answer='',
-                context='',
-                sources=[],
-                response=None
+                session=PQASession(question=question, raw_answer='', context=''),
+                status=AgentStatus.FAIL
             )
     
     def get_document_count(self) -> int:
