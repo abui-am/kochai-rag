@@ -19,6 +19,19 @@ from rag import settings as rag_settings
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import litellm
+
+# Register your custom model
+litellm.register_model({
+    "ft:gpt-4o-mini-2024-07-18::indo-conversational:CbsQZjOu": {
+        "mode": "chat",  # Add the missing 'mode' field
+        "input_cost_per_token": 0.00015,
+        "output_cost_per_token": 0.0006,
+        "max_tokens": 128000,
+        "provider": "openai"
+    }
+})
+
 class FitnessKnowledgeSystem:
     """Simple fitness knowledge system using PaperQA with startup indexing and pickle caching."""
     
