@@ -1,7 +1,45 @@
+# Core dependencies
 fastapi==0.109.2
 uvicorn==0.27.1
 python-dotenv==1.0.1
-paper-qa==2.1.1
-pydantic<2.0.0
 python-multipart==0.0.9
+
+# Authentication dependencies
+python-jose>=3.3.0
+cryptography>=41.0.0
+bcrypt>=4.0.0
+passlib>=1.7.0
+
+# OpenAI and LLM
 openai>=1.30.0
+langchain-openai>=0.1.0
+
+# RAG and document processing
+paper-qa>=5
+langchain-core>=0.3.74
+langchain>=0.3.27
+langchain-community>=0.3.27
+langchain-text-splitters>=0.3.9
+
+# Data handling and validation
+pydantic>=2.10.1
+
+# Database
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+
+
+# Async support
+aiofiles>=23.0.0
+
+# Configuration
+pyyaml>=6.0.0
+
+# Development and testing
+pytest>=7.0.0
+pytest-asyncio>=0.21.0
+ 
+# Evaluation
+ragas
+pandas>=2.0
+datasets>=2.14.0

@@ -1,0 +1,26 @@
+{
+  "profile": {
+    "name": "Dummy Evaluator",
+    "age": 32,
+    "gender": "female",
+    "fitness_level": "intermediate"
+  },
+  "goals": {
+    "primary": "fat_loss",
+    "secondary": "build_endurance"
+  },
+  "constraints": {
+    "equipment": ["resistance bands", "kettlebell"],
+    "time_per_session": "30 minutes",
+    "sessions_per_week": 4
+  },
+  "preferences": {
+    "workout_style": "circuit_training",
+    "language": "Bahasa Indonesia (casual)",
+    "trainer_tone": "friendly and encouraging"
+  },
+  "dietary": {
+    "style": "plant_forward",
+    "restrictions": ["lactose"]
+  }
+}
