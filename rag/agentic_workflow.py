@@ -13,9 +13,6 @@ from paperqa.agents.models import AnswerResponse
 from openai import OpenAI
 from paperqa.prompts import CANNOT_ANSWER_PHRASE, CITATION_KEY_CONSTRAINTS, select_paper_prompt
 
-from rag.docs_cache import (
-    save_docs_cache, load_docs_cache, clear_docs_cache, get_cache_info
-)
 from rag import settings as rag_settings
 
 # Set up logging
@@ -25,9 +22,8 @@ logger = logging.getLogger(__name__)
 class FitnessKnowledgeSystem:
     """Simple fitness knowledge system using PaperQA with startup indexing and pickle caching."""
     
-    def __init__(self, docs_dir: str = "./data/sources/processed", 
-                 openai_api_key: str = None, auto_index: bool = True,
-                 cache_dir: str = "./.cache"):
+    def __init__(self, docs_dir: str = "./data/sources/processed",
+                 openai_api_key: str = None, auto_index: bool = True):
         """
         Initialize the fitness knowledge system.
     
@@ -35,19 +31,13 @@ class FitnessKnowledgeSystem:
             docs_dir: Directory containing the source documents
             openai_api_key: OpenAI API key for LLM operations
             auto_index: Whether to build the index automatically on startup
-            cache_dir: Directory to store pickle cache of indexed documents
         """
         self.docs_dir = docs_dir
         self.openai_api_key = openai_api_key
         self.openai = OpenAI(api_key=openai_api_key)
         self.auto_index = auto_index
-        self.cache_dir = cache_dir
-        self.cache_path = str(Path(cache_dir) / "docs_index.pkl")
         self.index_built = False
         self.settings: Optional[Settings] = None
-        self.cached_docs = None
-        
-        Path(cache_dir).mkdir(parents=True, exist_ok=True)
         
         docs_path = Path(docs_dir)
         if not docs_path.exists():
@@ -55,7 +45,6 @@ class FitnessKnowledgeSystem:
         
         doc_files = list(docs_path.glob("*.pdf")) + list(docs_path.glob("*.txt"))
         logger.info(f"Found {len(doc_files)} documents in {docs_dir}")
-        logger.info(f"Index cache directory: {cache_dir}")
     
     def has_documents(self) -> bool:
         """Check if there are any documents available for RAG."""
@@ -111,60 +100,33 @@ class FitnessKnowledgeSystem:
     
     async def build_index(self) -> bool:
         """
-        Build the PaperQA index on startup with pickle caching.
-        
-        This method attempts to load a cached index first. If cache is valid,
-        it uses the cached Docs object. Otherwise, it rebuilds the index and
-        saves it to cache for faster future startup.
+        Build the PaperQA index on startup.
+
+        This method builds the document index from scratch each time.
         """
         try:
             if self.index_built:
                 return True
-                
+
             if not self.has_documents():
                 return False
-            
+
             logger.info("Building index...")
-            
+
             # Create settings
             self.settings = self._create_settings()
-            
-            cached_docs, is_valid = load_docs_cache(self.cache_path, self.docs_dir)
-            
-            # Step 1: Cache is valid and exists - load from cache
-            if is_valid and cached_docs is not None:
-                self.cached_docs = cached_docs
-                self.index_built = True
-                logger.info("Index loaded from cache (faster startup)")
-                return True
-            
-            # Step 2: Cache is invalid or doesn't exist - rebuild index
-            if cached_docs is not None:
-                logger.info("Cache exists but is stale (documents changed). Rebuilding index...")
-            else:
-                logger.info("Cache not found. Building new index...")
-            
+
             built_index = await get_directory_index(settings=self.settings)
-        
-            self.cached_docs = built_index
-            
+
             try:
                 indexed_files = await built_index.index_files
                 logger.info(f"Indexed {len(indexed_files)} files")
             except Exception as e:
                 logger.info(f"Index built (file count not available: {e})")
-            
-            # Step 3: Save to cache for future use
-            logger.info("Saving Docs to pickle cache...")
-            save_success = save_docs_cache(built_index, self.cache_path, self.docs_dir)
-            if save_success:
-                logger.info(f"Cache saved to {self.cache_path}")
-            else:
-                logger.warning("Failed to save cache (non-fatal, continuing)")
-            
+
             self.index_built = True
             return True
-            
+
         except Exception as e:
             logger.error(f"Failed to build index: {e}")
             self.index_built = False
@@ -223,65 +185,28 @@ class FitnessKnowledgeSystem:
         doc_files = list(docs_path.rglob("*.pdf")) + list(docs_path.rglob("*.txt"))
         return len(doc_files)
 
-    def clear_cache(self) -> bool:
-        """
-        Clear the pickle cache.
-        
-        Returns:
-            True if cache was cleared, False otherwise
-        """
-        return clear_docs_cache(self.cache_path)
     
-    def get_cache_info(self) -> Optional[dict]:
-        """
-        Get information about the current cache without loading the full Docs.
-        
-        Returns:
-            Dictionary with cache metadata or None if cache doesn't exist
-        """
-        return get_cache_info(self.cache_path)
     
-    def get_cache_status(self) -> Dict[str, Any]:
-        """
-        Get detailed status of the cache and system state.
-        
-        Returns:
-            Dictionary with comprehensive cache and system status
-        """
-        cache_info = self.get_cache_info()
-        
-        return {
-            "index_built": self.index_built,
-            "cache_exists": cache_info is not None,
-            "cache_info": cache_info,
-            "cache_path": self.cache_path,
-            "docs_dir": self.docs_dir,
-            "document_count": self.get_document_count(),
-            "has_cached_docs": self.cached_docs is not None
-        }
 
-async def create_fitness_knowledge_system(docs_dir: str = "./data/sources/processed", 
-                                        openai_api_key: str = None, 
-                                        auto_index: bool = True,
-                                        cache_dir: str = "./.cache") -> FitnessKnowledgeSystem:
+async def create_fitness_knowledge_system(docs_dir: str = "./data/sources/processed",
+                                        openai_api_key: str = None,
+                                        auto_index: bool = True) -> FitnessKnowledgeSystem:
     """
-    Create and initialize a fitness knowledge system using PaperQA with startup indexing and pickle caching.
-    
+    Create and initialize a fitness knowledge system using PaperQA with startup indexing.
+
     Args:
         docs_dir: Directory containing the source documents
         openai_api_key: OpenAI API key for LLM operations
         auto_index: Whether to build the index automatically on startup
-        cache_dir: Directory to store pickle cache of indexed documents
-        
+
     Returns:
         Initialized FitnessKnowledgeSystem instance with index built if auto_index=True
     """
     try:
         system = FitnessKnowledgeSystem(
-            docs_dir=docs_dir, 
-            openai_api_key=openai_api_key, 
-            auto_index=auto_index,
-            cache_dir=cache_dir
+            docs_dir=docs_dir,
+            openai_api_key=openai_api_key,
+            auto_index=auto_index
         )
         
         # Build index on startup if auto_index is enabled

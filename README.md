@@ -83,7 +83,6 @@ fitness-rag/
 ├── rag/                         # RAG system core
 │   ├── agentic_workflow.py      # PaperQA integration and knowledge system
 │   ├── settings.py              # Configuration and model settings
-│   ├── docs_cache.py            # Document caching utilities
 │   └── evaluation/              # Evaluation framework
 │       ├── preferences.py       # User preference handling
 │       └── ragas/               # RAGAS evaluation
@@ -118,12 +117,14 @@ fitness-rag/
 The system uses PaperQA for intelligent document processing and RAG capabilities:
 
 ### Document Management
+
 - **Document Storage**: Place fitness research documents (PDFs, TXTs) in `data/sources/`
 - **Automatic Processing**: Documents are automatically indexed and processed on system startup
 - **Smart Chunking**: Intelligent document segmentation for optimal retrieval
 - **Citation Tracking**: Automatic source attribution and reference management
 
 ### Document Preparation
+
 ```bash
 # Place your documents in the sources directory
 cp your_fitness_papers.pdf data/sources/
@@ -137,11 +138,13 @@ cp research_articles.txt data/sources/
 The system employs a sophisticated hybrid approach that intelligently combines:
 
 ### Core Architecture
+
 - **Vanilla LLM Base**: Provides conversational, engaging responses in Indonesian
 - **RAG Enhancement**: Adds scientific accuracy through document retrieval
 - **Intelligent Merging**: Seamlessly integrates research facts into natural conversation
 
 ### Key Benefits
+
 - 🎯 **Conversational Flow**: Maintains natural dialogue while adding scientific depth
 - 📚 **Evidence-Based**: All claims backed by research paper citations
 - 🔄 **Fallback Ready**: Works with or without document context
@@ -149,6 +152,7 @@ The system employs a sophisticated hybrid approach that intelligently combines:
 - 📖 **Transparent**: Clear source attribution for credibility
 
 ### Response Characteristics
+
 - **Language**: Indonesian (Bahasa Indonesia)
 - **Tone**: Supportive, certified fitness coach
 - **Content**: Evidence-based with actionable recommendations
@@ -167,26 +171,31 @@ The API will be available at `http://localhost:8000` with automatic API document
 ### API Endpoints
 
 #### Health & System Status
+
 - `GET /` - Health check
 - `GET /system/status` - System status and document indexing info
 
 #### Authentication
+
 - `POST /login` - User login (returns JWT token)
 - `POST /register` - User registration
 - `GET /users/me` - Get current user profile (requires auth)
 
 #### Query Endpoints
+
 - `POST /query` - Main RAG query with PaperQA document analysis
 - `POST /query/vanilla` - Direct GPT query without RAG (for comparison)
 
 ### Example API Usage
 
 #### Health Check
+
 ```bash
 curl http://localhost:8000/
 ```
 
 #### User Registration
+
 ```bash
 curl -X POST http://localhost:8000/register \
   -H "Content-Type: application/json" \
@@ -198,6 +207,7 @@ curl -X POST http://localhost:8000/register \
 ```
 
 #### Login
+
 ```bash
 curl -X POST http://localhost:8000/login \
   -H "Content-Type: application/json" \
@@ -208,6 +218,7 @@ curl -X POST http://localhost:8000/login \
 ```
 
 #### RAG Query (with authentication)
+
 ```bash
 curl -X POST http://localhost:8000/query \
   -H "Content-Type: application/json" \
@@ -218,6 +229,7 @@ curl -X POST http://localhost:8000/query \
 ```
 
 #### Vanilla GPT Query (comparison)
+
 ```bash
 curl -X POST http://localhost:8000/query/vanilla \
   -H "Content-Type: application/json" \
@@ -234,12 +246,14 @@ curl -X POST http://localhost:8000/query/vanilla \
 Evaluate your RAG system's performance using the comprehensive RAGAS evaluation suite:
 
 #### Quick Evaluation
+
 ```bash
 # Run evaluation with default settings
 python -m rag.evaluation.ragas.run_eval --dataset data/evaluation/dataset.json --max-samples 50
 ```
 
 #### Advanced Evaluation Options
+
 ```bash
 # With custom judge model
 python -m rag.evaluation.ragas.run_eval \
@@ -256,12 +270,14 @@ python -m rag.evaluation.ragas.run_eval \
 ```
 
 #### Evaluation Outputs
+
 - `data/evaluation/results/<timestamp>/per_sample.csv` - Individual sample results
 - `data/evaluation/results/<timestamp>/aggregate.json` - Overall metrics and scores
 
 ### Dataset Management
 
 #### Generate Evaluation Datasets
+
 ```bash
 # Basic dataset without preferences
 python populate_dataset.py
@@ -274,7 +290,9 @@ python populate_dataset.py --use-default-preferences
 ```
 
 #### Dataset Format
+
 The evaluation expects JSON datasets in this format:
+
 ```json
 [
   {
@@ -287,12 +305,14 @@ The evaluation expects JSON datasets in this format:
 ### Testing Scripts
 
 #### Unit Tests
+
 ```bash
 # Run preference loader tests
 python -m pytest tests/test_preferences_loader.py -v
 ```
 
 #### Integration Testing
+
 ```bash
 # Test API endpoints
 curl http://localhost:8000/
@@ -304,12 +324,15 @@ curl http://localhost:8000/system/status
 ## 🔧 Development
 
 ### Code Quality
+
 - **Linting**: Uses Ruff for fast Python linting
 - **Testing**: Pytest framework for unit and integration tests
 - **Type Hints**: Full type annotation coverage
 
 ### Dependencies
+
 The project maintains a minimal, curated dependency list with only 10 core packages:
+
 - `fastapi` - Web framework
 - `pydantic` - Data validation
 - `sqlalchemy` - Database ORM
@@ -324,6 +347,7 @@ The project maintains a minimal, curated dependency list with only 10 core packa
 ## 🚀 Deployment
 
 ### Production Setup
+
 ```bash
 # Use production database
 DATABASE_URL=postgresql+asyncpg://user:password@host:port/database
@@ -337,6 +361,7 @@ API_PORT=8000
 ```
 
 ### Docker Deployment (Future)
+
 ```bash
 # Planned: Docker support coming soon
 docker build -t fitness-rag .
@@ -348,6 +373,7 @@ docker run -p 8000:8000 fitness-rag
 ### Common Issues
 
 **Database Connection Errors**
+
 ```bash
 # Check database URL format
 DATABASE_URL=sqlite+aiosqlite:///./fitness_rag.db  # SQLite
@@ -355,6 +381,7 @@ DATABASE_URL=postgresql+asyncpg://user:pass@host/db  # PostgreSQL
 ```
 
 **OpenAI API Errors**
+
 ```bash
 # Verify API key
 echo $OPENAI_API_KEY
@@ -362,6 +389,7 @@ echo $OPENAI_API_KEY
 ```
 
 **Document Indexing Issues**
+
 ```bash
 # Check document directory permissions
 ls -la data/sources/
@@ -371,6 +399,7 @@ file data/sources/your_document.pdf
 ```
 
 ### Debug Mode
+
 ```bash
 # Enable debug logging
 LOG_LEVEL=DEBUG python run.py
@@ -379,6 +408,7 @@ LOG_LEVEL=DEBUG python run.py
 ## 📚 Documentation
 
 Additional documentation available in `docs/`:
+
 - `CACHE_GUIDE.md` - Document caching strategies
 - `GOOGLE_AUTH_SETUP.md` - Authentication setup
 - `IMPLEMENTATION_SUMMARY.md` - Technical implementation details
