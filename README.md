@@ -1,219 +1,397 @@
 # Fitness RAG
 
-A RAG (Retrieval-Augmented Generation) system for fitness-related research papers and content.
+A comprehensive AI-powered fitness knowledge system combining Retrieval-Augmented Generation (RAG) with PaperQA for intelligent document analysis and personalized fitness guidance.
+
+## ✨ Features
+
+- 🤖 **AI-Powered Responses**: GPT-4 powered fitness guidance with scientific accuracy
+- 📚 **Research Integration**: PaperQA-powered document analysis and citation tracking
+- 🔐 **User Authentication**: Secure user registration, login, and profile management
+- 🎯 **Personalized Recommendations**: User preferences and fitness goals integration
+- 📊 **System Monitoring**: Real-time system status and document indexing
+- 🧪 **Hybrid Approach**: Combines vanilla LLM with RAG for optimal responses
+- 📈 **Performance Evaluation**: RAGAS-powered evaluation and metrics
+- 🔄 **Auto-indexing**: Automatic document processing and indexing
 
 ## Setup
 
-1. Create a Python virtual environment:
+### Prerequisites
+
+- Python 3.11+
+- OpenAI API key
+- SQLite database (default) or PostgreSQL
+
+### Quick Start
+
+1. **Clone and setup environment:**
 
 ```bash
+git clone <repository-url>
+cd fitness-rag
 python3.11 -m venv venv
 source venv/bin/activate  # On Unix/macOS
 # or
-.\venv\Scripts\activate  # On Windows
+.\venv\Scripts\activate   # On Windows
 ```
 
-2. Install dependencies:
+2. **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Set up environment variables:
-   - Copy `.env.template` to `.env`
-   - Edit `.env` and add your OpenAI API key and other configurations
+3. **Configure environment:**
+
+Create a `.env` file in the project root:
 
 ```bash
-cp .env.template .env
-# Edit .env with your preferred editor
+# Required
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Optional - API Server
+API_HOST=0.0.0.0
+API_PORT=8000
+
+# Optional - Database (SQLite by default)
+DATABASE_URL=sqlite+aiosqlite:///./fitness_rag.db
+
+# Optional - RAGAS Evaluation
+RAGAS_JUDGE_MODEL=gpt-4o-mini
+
+# Optional - Vanilla LLM settings
+VANILLA_TEMPERATURE=0.2
 ```
 
-4. Required environment variables:
-   - `OPENAI_API_KEY`: Your OpenAI API key
-   - `MODEL_NAME`: OpenAI model to use (default: gpt-4-turbo-preview)
-   - `API_HOST`: Host to run the API on (default: 0.0.0.0)
-   - `API_PORT`: Port to run the API on (default: 8000)
-   - `LOG_LEVEL`: Logging level (default: INFO)
-   - `VANILLA_MODEL_NAME`: (optional) GPT model for the comparison endpoint (default: gpt-4o-mini)
-   - `VANILLA_TEMPERATURE`: (optional) Generation temperature for `/query/vanilla` (default: 0.2)
+### Database Setup
+
+The system uses SQLite by default. The database will be automatically created on first run. For production, consider PostgreSQL:
+
+```bash
+# For PostgreSQL
+DATABASE_URL=postgresql+asyncpg://user:password@localhost/fitness_rag
+```
 
 ## 📁 Project Structure
 
 ```
 fitness-rag/
-├── config/
-│   └── agentic_config.yaml      # Agentic workflow configurations
-├── src/
-│   ├── models/                  # Model architectures
-│   ├── data/                    # Data loading and processing
-│   ├── training/                # Training loops and utilities
-│   ├── inference/               # Inference pipelines
-│   └── utils/                   # Helper functions
-├── rag/
-│   └── agentic_workflow.py     # Core agentic workflow system
-├── gradio_app/                  # Gradio web interface
-├── notebooks/                   # Jupyter notebooks for experiments
-├── scripts/                     # Training and inference scripts
+├── api/                         # FastAPI application
+│   ├── main.py                  # Main API endpoints and routing
+│   ├── auth_utils.py            # Authentication utilities
+│   ├── auth_models.py           # Authentication data models
+│   └── database.py              # Database operations and models
+├── rag/                         # RAG system core
+│   ├── agentic_workflow.py      # PaperQA integration and knowledge system
+│   ├── settings.py              # Configuration and model settings
+│   ├── docs_cache.py            # Document caching utilities
+│   └── evaluation/              # Evaluation framework
+│       ├── preferences.py       # User preference handling
+│       └── ragas/               # RAGAS evaluation
+│           ├── run_eval.py      # Evaluation runner
+│           ├── adapters.py      # RAGAS adapters
+│           └── dataset_loader.py # Dataset loading utilities
+├── config/                      # Configuration files
+│   └── user_preferences_dummy.json # Default user preferences
+├── data/                        # Data and evaluation
+│   ├── sources/                 # Document sources
+│   │   └── processed/           # Processed documents
+│   └── evaluation/              # Evaluation datasets and results
+│       ├── dataset.json         # Evaluation questions
+│       ├── dataset-preferenced.json # Personalized evaluation
+│       └── results/             # Evaluation outputs
+├── docs/                        # Documentation
+│   ├── CACHE_GUIDE.md           # Caching documentation
+│   ├── GOOGLE_AUTH_SETUP.md     # Google Auth setup guide
+│   ├── IMPLEMENTATION_SUMMARY.md # Implementation details
+│   └── VERIFICATION_REPORT.md   # Verification reports
 ├── tests/                       # Unit tests
-├── data/                        # Document storage (any directory with PDFs/TXTs)
-├── requirements.txt             # Python dependencies
-├── start_api.py                 # API startup script
+│   └── test_preferences_loader.py # Preferences testing
+├── requirements.txt             # Python dependencies (10 core packages)
+├── run.py                       # Application entry point
+├── populate_dataset.py          # Dataset population script
+├── evaluation_dataset*.json     # Generated evaluation datasets
 └── README.md                    # This file
 ```
 
 ## 🗂️ Data Management
 
-The system uses PaperQA2 for automatic document processing and indexing:
+The system uses PaperQA for intelligent document processing and RAG capabilities:
 
-- **Document Storage**: Place your fitness research documents (PDFs, TXTs) in any directory
-- **Automatic Indexing**: PaperQA2 automatically indexes documents on first query
-- **Smart Processing**: Intelligent chunking and embedding for optimal retrieval
-- **Citation Tracking**: Automatic source citation and reference management
+### Document Management
+- **Document Storage**: Place fitness research documents (PDFs, TXTs) in `data/sources/`
+- **Automatic Processing**: Documents are automatically indexed and processed on system startup
+- **Smart Chunking**: Intelligent document segmentation for optimal retrieval
+- **Citation Tracking**: Automatic source attribution and reference management
 
-## 🚀 Hybrid Approach: Vanilla LLM (Base) + RAG (Enhancement)
-
-The system now uses a **hybrid approach** that uses vanilla LLM as the foundation and RAG as enhancement:
-
-### How It Works
-
-1. **Vanilla LLM Base**: First, the system generates a conversational, friendly BASE response using the base LLM
-2. **RAG Data Enhancement**: Then, it retrieves specific, factual information from your fitness research documents
-3. **Intelligent Merging**: Finally, it intelligently merges both into ONE cohesive answer, weaving research facts naturally into the conversational tone
-
-### Benefits
-
-- **🎯 Strong Foundation**: Vanilla LLM provides conversational, engaging base responses
-- **📚 Enhanced Details**: RAG adds specific, factual information from research papers
-- **🔄 Fallback Support**: Works even when no documents are available
-- **📖 Source Citations**: Automatic reference tracking for credibility
-- **💬 Natural Flow**: Maintains conversational tone while adding scientific depth
-
-### Example Output Format
-
-```
-[Vanilla LLM base response enhanced with RAG details]
-
-Summary:
-[concise summary]
-```
-
-The system now uses the vanilla LLM response as the foundation and enhances it with specific research details from RAG, maintaining the conversational tone while adding scientific accuracy. The responses are intelligently merged into one cohesive answer without separate sections or labels.
-
-### Testing the Hybrid Approach
-
-Run the test script to see the hybrid approach in action:
-
+### Document Preparation
 ```bash
-python test_hybrid_approach.py
+# Place your documents in the sources directory
+cp your_fitness_papers.pdf data/sources/
+cp research_articles.txt data/sources/
+
+# The system will automatically index them on first query
 ```
 
-## Usage
+## 🧠 Hybrid Intelligence: Combining LLM + RAG
 
-Run the API server:
+The system employs a sophisticated hybrid approach that intelligently combines:
+
+### Core Architecture
+- **Vanilla LLM Base**: Provides conversational, engaging responses in Indonesian
+- **RAG Enhancement**: Adds scientific accuracy through document retrieval
+- **Intelligent Merging**: Seamlessly integrates research facts into natural conversation
+
+### Key Benefits
+- 🎯 **Conversational Flow**: Maintains natural dialogue while adding scientific depth
+- 📚 **Evidence-Based**: All claims backed by research paper citations
+- 🔄 **Fallback Ready**: Works with or without document context
+- 🎭 **Personalized**: Adapts to user preferences and fitness goals
+- 📖 **Transparent**: Clear source attribution for credibility
+
+### Response Characteristics
+- **Language**: Indonesian (Bahasa Indonesia)
+- **Tone**: Supportive, certified fitness coach
+- **Content**: Evidence-based with actionable recommendations
+- **Sources**: Automatic citation of research papers
+
+## 🚀 Usage
+
+### Starting the API Server
 
 ```bash
 python run.py
 ```
 
-The API will be available at `http://localhost:8000` (or your configured host/port).
+The API will be available at `http://localhost:8000` with automatic API documentation at `http://localhost:8000/docs`.
 
-### Vanilla GPT Comparison Endpoint
+### API Endpoints
 
-Use this endpoint when you want to compare PaperQA-enhanced answers with a plain GPT response.
+#### Health & System Status
+- `GET /` - Health check
+- `GET /system/status` - System status and document indexing info
 
-- **URL**: `POST /query/vanilla`
-- **Payload (JSON only)**:
+#### Authentication
+- `POST /login` - User login (returns JWT token)
+- `POST /register` - User registration
+- `GET /users/me` - Get current user profile (requires auth)
 
+#### Query Endpoints
+- `POST /query` - Main RAG query with PaperQA document analysis
+- `POST /query/vanilla` - Direct GPT query without RAG (for comparison)
+
+### Example API Usage
+
+#### Health Check
 ```bash
-curl -X POST http://localhost:8000/query/vanilla \
+curl http://localhost:8000/
+```
+
+#### User Registration
+```bash
+curl -X POST http://localhost:8000/register \
   -H "Content-Type: application/json" \
   -d '{
-        "text": "Apa manfaat compound exercise buat muscle growth?"
-      }'
+    "email": "user@example.com",
+    "name": "Fitness User",
+    "password": "securepassword"
+  }'
 ```
 
-- **Response fields**:
-  - `answer`: GPT output in Bahasa Indonesia (no RAG context)
-  - `model`: The model specified via `VANILLA_MODEL_NAME`
-  - `usage`: Token usage from the OpenAI Responses API
-  - `query`: Echo of the submitted question
-  - `status`: `"success"` when generation completes
-  - `preferences`: Preferences derived from the authenticated user profile (if a JWT is supplied)
+#### Login
+```bash
+curl -X POST http://localhost:8000/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "securepassword"
+  }'
+```
 
-Example call with auth:
+#### RAG Query (with authentication)
+```bash
+curl -X POST http://localhost:8000/query \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "text": "What are the benefits of compound exercises for muscle growth?"
+  }'
+```
 
+#### Vanilla GPT Query (comparison)
 ```bash
 curl -X POST http://localhost:8000/query/vanilla \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <token-optional>" \
-  -d '{"text": "Apa manfaat compound exercise buat muscle growth?"}'
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -d '{
+    "text": "What are the benefits of compound exercises for muscle growth?"
+  }'
 ```
 
-## Evaluation with RAGAS
+## 📊 Evaluation & Testing
 
-Run end-to-end evaluation of the PaperQA-based RAG using the latest RAGAS.
+### RAGAS Evaluation Framework
 
-1. Ensure dependencies are installed:
+Evaluate your RAG system's performance using the comprehensive RAGAS evaluation suite:
 
+#### Quick Evaluation
 ```bash
-pip install -r requirements.txt
-```
-
-2. Prepare dataset at `data/evaluation/dataset.json` as a JSON array of objects:
-
-```json
-[{ "question": "...", "expected_answer": "..." }]
-```
-
-3. Run the evaluator:
-
-```bash
+# Run evaluation with default settings
 python -m rag.evaluation.ragas.run_eval --dataset data/evaluation/dataset.json --max-samples 50
 ```
 
-Optional flags:
-
-- `--model`: judge model (default `gpt-4o-mini`)
-- `--save-dir`: output root dir (default `data/evaluation/results`)
-- `--docs-dir`: documents dir for RAG (default `./data/sources/processed`)
-- `--preferences-text`: inline preference block that mirrors authenticated users
-- `--preferences-file`: path to a JSON or plaintext block (see `config/user_preferences_dummy.json`)
-- `--use-default-preferences`: apply the bundled dummy profile without editing files
-
-Outputs:
-
-- `data/evaluation/results/<timestamp>/per_sample.csv`
-- `data/evaluation/results/<timestamp>/aggregate.json` with `ragas_version`, `judge_model`, and metric aggregates
-
-### Populating datasets with (or without) preferences
-
-Use `populate_dataset.py` to refresh `data/evaluation/dataset.json` and decide whether personalization should be active:
-
+#### Advanced Evaluation Options
 ```bash
-# Baseline run without user preferences
+# With custom judge model
+python -m rag.evaluation.ragas.run_eval \
+  --dataset data/evaluation/dataset.json \
+  --model gpt-4o \
+  --max-samples 100 \
+  --use-default-preferences
+
+# With custom document directory
+python -m rag.evaluation.ragas.run_eval \
+  --dataset data/evaluation/dataset.json \
+  --docs-dir ./custom_docs/ \
+  --save-dir ./evaluation_results/
+```
+
+#### Evaluation Outputs
+- `data/evaluation/results/<timestamp>/per_sample.csv` - Individual sample results
+- `data/evaluation/results/<timestamp>/aggregate.json` - Overall metrics and scores
+
+### Dataset Management
+
+#### Generate Evaluation Datasets
+```bash
+# Basic dataset without preferences
 python populate_dataset.py
 
-# Run with inline preferences
+# Dataset with custom preferences
 python populate_dataset.py --preferences-text "- Goal: muscle_gain\n- Equipment: resistance bands"
 
-# Run with the bundled dummy profile (also usable for evaluation)
+# Dataset with default preferences
 python populate_dataset.py --use-default-preferences
 ```
 
-You can reuse the same flags with the evaluation script:
-
-```bash
-python -m rag.evaluation.ragas.run_eval \
-  --dataset data/evaluation/dataset.json \
-  --use-default-preferences
+#### Dataset Format
+The evaluation expects JSON datasets in this format:
+```json
+[
+  {
+    "question": "What are the benefits of compound exercises?",
+    "expected_answer": "Compound exercises work multiple muscle groups simultaneously..."
+  }
+]
 ```
 
-Both scripts embed the effective preference block in their outputs, making it easy to compare personalized vs. non-personalized runs.
+### Testing Scripts
 
-> ℹ️ Whenever preferences are enabled, the generated files are suffixed with `-preferenced`
-> (for example `dataset-preferenced.json`, `evaluation_dataset-preferenced.json`) so you can
-> keep baseline and personalized artifacts side-by-side.
+#### Unit Tests
+```bash
+# Run preference loader tests
+python -m pytest tests/test_preferences_loader.py -v
+```
 
-## License
+#### Integration Testing
+```bash
+# Test API endpoints
+curl http://localhost:8000/
 
-[Add your license information here]
+# Test system status
+curl http://localhost:8000/system/status
+```
+
+## 🔧 Development
+
+### Code Quality
+- **Linting**: Uses Ruff for fast Python linting
+- **Testing**: Pytest framework for unit and integration tests
+- **Type Hints**: Full type annotation coverage
+
+### Dependencies
+The project maintains a minimal, curated dependency list with only 10 core packages:
+- `fastapi` - Web framework
+- `pydantic` - Data validation
+- `sqlalchemy` - Database ORM
+- `openai` - OpenAI API client
+- `paper-qa` - Document analysis
+- `passlib` - Password hashing
+- `PyJWT` - JWT token handling
+- `python-dotenv` - Environment management
+- `ragas` - Evaluation framework
+- `uvicorn` - ASGI server
+
+## 🚀 Deployment
+
+### Production Setup
+```bash
+# Use production database
+DATABASE_URL=postgresql+asyncpg://user:password@host:port/database
+
+# Set secure JWT secret
+JWT_SECRET_KEY=your-secure-random-secret-here
+
+# Configure for production
+API_HOST=0.0.0.0
+API_PORT=8000
+```
+
+### Docker Deployment (Future)
+```bash
+# Planned: Docker support coming soon
+docker build -t fitness-rag .
+docker run -p 8000:8000 fitness-rag
+```
+
+## 🔍 Troubleshooting
+
+### Common Issues
+
+**Database Connection Errors**
+```bash
+# Check database URL format
+DATABASE_URL=sqlite+aiosqlite:///./fitness_rag.db  # SQLite
+DATABASE_URL=postgresql+asyncpg://user:pass@host/db  # PostgreSQL
+```
+
+**OpenAI API Errors**
+```bash
+# Verify API key
+echo $OPENAI_API_KEY
+# Should start with 'sk-'
+```
+
+**Document Indexing Issues**
+```bash
+# Check document directory permissions
+ls -la data/sources/
+
+# Verify document formats (PDF/TXT supported)
+file data/sources/your_document.pdf
+```
+
+### Debug Mode
+```bash
+# Enable debug logging
+LOG_LEVEL=DEBUG python run.py
+```
+
+## 📚 Documentation
+
+Additional documentation available in `docs/`:
+- `CACHE_GUIDE.md` - Document caching strategies
+- `GOOGLE_AUTH_SETUP.md` - Authentication setup
+- `IMPLEMENTATION_SUMMARY.md` - Technical implementation details
+- `VERIFICATION_REPORT.md` - System verification reports
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes with tests
+4. Run evaluation suite
+5. Submit a pull request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
