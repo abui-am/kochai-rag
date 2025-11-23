@@ -16,7 +16,7 @@ from paperqa.prompts import CITATION_KEY_CONSTRAINTS, summary_prompt
 # ============================================================================
 
 # Main LLM for evidence retrieval and answer generation
-PRIMARY_LLM = "gpt-4o-mini-2024-07-18"
+PRIMARY_LLM = "ft:gpt-4o-mini-2024-07-18::indo-conversational:CbsQZjOu"
 
 # LLM for agent reasoning and tool selection
 AGENT_LLM = "gpt-4o-mini-2024-07-18"
