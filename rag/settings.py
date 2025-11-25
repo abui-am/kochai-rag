@@ -85,7 +85,7 @@ VERBOSITY = 1
 # ============================================================================
 
 # Timeout for agent operations (in seconds)
-AGENT_TIMEOUT = 30.0
+AGENT_TIMEOUT = 60.0
 
 # Number of evidence pieces to gather for agent reasoning
 AGENT_EVIDENCE_N = 6

@@ -92,6 +92,7 @@ class FitnessKnowledgeSystem:
         # Agent prompt with user preferences
         settings.agent.agent_prompt = rag_settings.get_agent_prompt_with_preferences(agent_prefs)
 
+
         # QA prompt from rag.settings
         settings.prompts.qa = rag_settings.get_qa_prompt_v2(user_preferences=agent_prefs)
         settings.verbosity = 3

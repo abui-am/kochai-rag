@@ -417,7 +417,7 @@ async def query(
         result = await system.query(request.question, preferences=agent_prefs)
 
         # Check if query was successful and has an answer
-        if result.status == AgentStatus.SUCCESS and result.session.raw_answer:
+        if result.status != AgentStatus.FAIL and result.session.raw_answer:
             return {
                 "answer": result.session.raw_answer,
                 "context": result.session.context,
