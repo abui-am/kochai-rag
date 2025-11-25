@@ -35,7 +35,7 @@ EVIDENCE_K = 5
 EVIDENCE_RETRIEVAL = True
 
 # Length of per-evidence summaries
-EVIDENCE_SUMMARY_LENGTH = "about 300 words"
+EVIDENCE_SUMMARY_LENGTH = "about 100 words"
 
 # Skip evidence summary (if False, summaries will be generated)
 EVIDENCE_SKIP_SUMMARY = False
@@ -51,7 +51,7 @@ ANSWER_MAX_SOURCES = 5
 ANSWER_LENGTH = "about 300 words, but can be longer"
 
 # Maximum concurrent requests for RAG parallelism
-MAX_CONCURRENT_REQUESTS = 4
+MAX_CONCURRENT_REQUESTS = 10
 
 # Filter out extra background information
 ANSWER_FILTER_EXTRA_BACKGROUND = False
@@ -75,7 +75,7 @@ TEXTS_INDEX_MMR_LAMBDA = 1.0
 TEMPERATURE = 0.0
 
 # Batch size for processing
-BATCH_SIZE = 5
+BATCH_SIZE = 10
 
 # Verbosity level (0 = minimal logging)
 VERBOSITY = 1

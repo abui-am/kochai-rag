@@ -59,6 +59,24 @@ class FitnessKnowledgeSystem:
         settings = Settings(
             paper_directory=self.docs_dir,
         )
+        settings.agent.max_timesteps = 6
+        settings.agent.search_count = 2
+        # settings.agent.agent_type = "fake"
+        # settings.agent.agent_type = "fake"
+        # settings.batch_size
+        settings.parsing.chunk_size = 7000
+        settings.parsing.overlap = 700
+
+        settings.prompts.summary = (
+    "Summarize the excerpt below to help answer a question.\n\nExcerpt from"
+    " {citation}\n\n----\n\n{text}\n\n----\n\nQuestion: {question}\n\nDo not directly"
+    " answer the question, instead summarize to give evidence to help answer the"
+    " question. Stay detailed; report specific numbers, equations, or direct quotes"
+    ' (marked with quotation marks). Reply "Not applicable" if the excerpt is'
+    " irrelevant. [IMPORTANT] Summarize in english. At the end of your response, provide an integer score from 1-10 on a"
+    " newline indicating relevance to question. Do not explain your score.\n\nRelevant"
+    " Information Summary ({summary_length}):"
+)
 
         # Evidence settings from rag.settings
         settings.answer.evidence_k = rag_settings.EVIDENCE_K
@@ -95,7 +113,7 @@ class FitnessKnowledgeSystem:
 
         # QA prompt from rag.settings
         settings.prompts.qa = rag_settings.get_qa_prompt_v2(user_preferences=agent_prefs)
-        settings.verbosity = 3
+        settings.verbosity = 1
         logger.info("Settings created with agent_prefs: %s", agent_prefs)
         return settings
     
