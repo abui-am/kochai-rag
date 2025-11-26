@@ -14,9 +14,11 @@ from ragas.metrics import (
     ContextRelevance,
     Faithfulness,
     IDBasedContextRecall,
-    ResponseRelevancy,
+    AnswerRelevancy
 )
+
 from ragas.llms.base import llm_factory
+from ragas.prompt import PydanticPrompt
 
 from .dataset_loader import load_dataset
 from .adapters import create_knowledge_system, extract_answer_and_contexts
@@ -140,7 +142,6 @@ def main() -> None:
 
 
         answer_text, ctxs, context_ids = extract_answer_and_contexts(answer_response)
-
         dataset.append({
             "user_input": q,
             "response": answer_text,
@@ -158,7 +159,7 @@ def main() -> None:
     print(f"Saved evaluation dataset to {evaluation_output}")
     evaluation_dataset = EvaluationDataset.from_list(dataset)
     evaluator_llm = llm
-    result = evaluate(dataset=evaluation_dataset,metrics=[IDBasedContextRecall(), Faithfulness(), ResponseRelevancy(), ContextRelevance()],llm=evaluator_llm)
+    result = evaluate(dataset=evaluation_dataset,metrics=[IDBasedContextRecall(), Faithfulness(), AnswerRelevancy(), ContextRelevance()],llm=evaluator_llm)
     print(result)
 
     list_eval_dataset = evaluation_dataset.to_list()

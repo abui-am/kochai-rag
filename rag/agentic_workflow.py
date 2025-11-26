@@ -67,16 +67,6 @@ class FitnessKnowledgeSystem:
         settings.parsing.chunk_size = 7000
         settings.parsing.overlap = 700
 
-        settings.prompts.summary = (
-    "Summarize the excerpt below to help answer a question.\n\nExcerpt from"
-    " {citation}\n\n----\n\n{text}\n\n----\n\nQuestion: {question}\n\nDo not directly"
-    " answer the question, instead summarize to give evidence to help answer the"
-    " question. Stay detailed; report specific numbers, equations, or direct quotes"
-    ' (marked with quotation marks). Reply "Not applicable" if the excerpt is'
-    " irrelevant. [IMPORTANT] Summarize in english. At the end of your response, provide an integer score from 1-10 on a"
-    " newline indicating relevance to question. Do not explain your score.\n\nRelevant"
-    " Information Summary ({summary_length}):"
-)
 
         # Evidence settings from rag.settings
         settings.answer.evidence_k = rag_settings.EVIDENCE_K
@@ -84,6 +74,7 @@ class FitnessKnowledgeSystem:
         settings.answer.evidence_skip_summary = rag_settings.EVIDENCE_SKIP_SUMMARY
 
         # Answer generation settings from rag.settings
+        settings.answer.evidence_relevance_score_cutoff = 70
         settings.answer.answer_max_sources = rag_settings.ANSWER_MAX_SOURCES
         settings.answer.answer_length = rag_settings.ANSWER_LENGTH
         settings.answer.max_concurrent_requests = rag_settings.MAX_CONCURRENT_REQUESTS
@@ -95,7 +86,24 @@ class FitnessKnowledgeSystem:
 
         # Paper selection prompt from rag.settings
         settings.prompts.select = rag_settings.build_select_paper_prompt(agent_prefs)
-        settings.prompts.summary = rag_settings.SUMMARIZATION_PROMPT
+        settings.prompts.summary_json_system =  """\
+Provide a summary of the relevant information that could help answer the question based on the excerpt. Respond with the following JSON format:
+
+{{
+  "summary": "...",
+  "relevance_score": "..."
+}}
+
+where `summary` is relevant information from the text - {summary_length} words. `relevance_score` is an integer 1-100 for the relevance of `summary` to the question. Summarize in english.
+
+Scoring Rubric (1-100):
+   - 1-20: No meaningful relation to the question; almost entirely irrelevant.
+   - 30-40: Very weak relation; only sparse or vague connections to the question.
+   - 50-60: Partially relevant; some useful evidence but limited coverage or specificity.
+   - 70-90: Strong relevance; substantial evidence that meaningfully supports answering the question.
+   - 100: Highly focused and densely relevant; most of the excerpt is directly useful for the question."""
+
+        settings.prompts.summary_json = rag_settings.get_summary_prompt_with_preferences(agent_prefs)
         # LLM models from rag.settings
         settings.llm = rag_settings.PRIMARY_LLM
         settings.agent.agent_llm = rag_settings.AGENT_LLM
@@ -113,7 +121,7 @@ class FitnessKnowledgeSystem:
 
         # QA prompt from rag.settings
         settings.prompts.qa = rag_settings.get_qa_prompt_v2(user_preferences=agent_prefs)
-        settings.verbosity = 1
+        # settings.verbosity = 0
         logger.info("Settings created with agent_prefs: %s", agent_prefs)
         return settings
     

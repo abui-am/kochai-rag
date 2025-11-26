@@ -9,7 +9,7 @@ making it easy to:
 
 from typing import Optional
 
-from paperqa.prompts import CITATION_KEY_CONSTRAINTS, summary_prompt
+from paperqa.prompts import CITATION_KEY_CONSTRAINTS, summary_json_prompt, summary_prompt
 
 # ============================================================================
 # MODEL CONFIGURATION
@@ -373,18 +373,12 @@ Your task:
 Given a QUESTION and an ANSWER, you must:
 1) Infer what question someone might have asked to receive this answer.
 2) Compare that inferred question to the original QUESTION.
-3) Assign a relevance score between 0.0 and 1.0:
-   - 1.0   → fully relevant, clearly answers all key parts.
-   - 0.8-1 → mostly relevant, minor omissions or extra info.
-   - 0.4-0.8 → partially relevant, only some aspects answered.
-   - 0.0-0.4 → mostly irrelevant or generic.
-
-Always respond in this JSON format (no extra text):
-{{
-  "inferred_question": "...",
-  "analysis": "...",
-  "score": <float between 0 and 1>
-}}
+3) Assign a relevance score between 0.0 and 100.0:
+   - 100.0   → fully relevant, clearly answers all key parts.
+   - 80.0-100.0 → mostly relevant, minor omissions or extra info.
+   - 20.0-40.0 → partially relevant, only some aspects answered.
+   - 0.0-20.0 → mostly irrelevant or generic.
+4) Retry the evaluation if the score is not accurate.
 
 ====================
 EXAMPLE 1 – LOW RELEVANCE
@@ -399,7 +393,7 @@ YOUR EVALUATION:
 {{
   "inferred_question": "Where is France located in Europe?",
   "analysis": "The answer only addresses the location of France, but completely ignores the part about its capital city. It answers only one of the two key slots: 'where' but not 'what capital'. This is incomplete and only partially relevant to the full question.",
-  "score": 0.4
+  "score": 40.0
 }}
 
 ====================
@@ -415,7 +409,7 @@ YOUR EVALUATION:
 {{
   "inferred_question": "Where is France located and what is the name of its capital city?",
   "analysis": "The answer directly addresses both parts of the question: the geographical location of France and the name of its capital. A reader could reconstruct the original question almost exactly from this answer.",
-  "score": 0.98
+  "score": 100.0
 }}
 
 ====================
@@ -431,17 +425,17 @@ YOUR EVALUATION:
 {{
   "inferred_question": "What should I do after a workout to recover better?",
   "analysis": "The answer talks about post-workout recovery in general (nutrition and hydration) but does not mention any specific amount of protein. It partially relates to the topic but fails to answer the key 'how much protein' slot.",
-  "score": 0.5
+  "score": 50.0
 }}
 """
 )
 def get_agent_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
     """
     Generate the agent prompt with optional user preferences.
-    
+
     Args:
         agent_prefs: Optional string describing user preferences
-        
+
     Returns:
         The agent prompt with preferences incorporated
     """
@@ -452,6 +446,27 @@ def get_agent_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
         )
     else:
         return AGENT_PROMPT_BASE
+
+
+def get_summary_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
+    """
+    Generate the summary prompt with optional user preferences.
+
+    Args:
+        agent_prefs: Optional string describing user preferences
+
+    Returns:
+        The summary prompt with preferences incorporated
+    """
+    base_prompt = summary_json_prompt
+    if agent_prefs:
+        return (
+            f"{base_prompt}\n\n"
+            f"User preferences to consider when summarizing:\n{agent_prefs}\n"
+            "Use these preferences to guide the relevance assessment and summary focus."
+        )
+    else:
+        return base_prompt
 
 
 def get_settings_dict() -> dict:
@@ -496,44 +511,4 @@ def get_settings_dict() -> dict:
     }
 
 
-SUMMARIZATION_PROMPT  = (
-    "Summarize the excerpt below to help answer a question.\n\n"
-    "Excerpt from {citation}\n\n"
-    "----\n\n{text}\n\n----\n\n"
-    "Question: {question}\n\n"
-    "Your task is NOT to answer the question directly. Instead, produce a detailed, "
-    "evidence-focused summary that extracts all information from the excerpt that "
-    "may help answer or reason about the question.\n\n"
-    "summarize in english language\n"
-    "Follow these rules:\n"
-    "1) High Recall: Include every piece of potentially useful information, even if indirect. "
-    "   Do not omit technical details, assumptions, equations, datasets, methods, limitations, or examples.\n"
-    "2) Evidence Priority: Prefer direct quotes (use quotation marks) for claims, definitions, or key findings. "
-    "   Include numerical values, metrics, thresholds, model sizes, datasets, or formulas whenever present.\n"
-    "3) Structured Extraction: Capture relevant points such as objectives, methods, results, comparisons, "
-    "   limitations, and contextual background if they relate to the question.\n"
-    "4) Irrelevance Filter: If the excerpt has no content that could support answering the question, "
-    '   respond with \"Not applicable\".\n'
-    "5) Do NOT add external knowledge or assumptions—summarize only what is in the excerpt.\n"
-    "6) Maintain neutrality; do not make conclusions or interpretations beyond the text.\n\n"
-    "Internal reasoning protocol for relevance scoring (do not include in the output):\n"
-    "1) Claim Extraction: Break the question into explicit and implicit claims or sub-questions.\n"
-    "2) Evidence Mapping: For each claim, check whether the excerpt provides definitions, methods, results, "
-    "   examples, background, or any information that could help address that claim.\n"
-    "3) Overlap Assessment: Estimate how much of the excerpt is devoted to content related to the claims "
-    "   (directly or indirectly) versus unrelated material.\n"
-    "4) Strength Assessment: Consider how specific and actionable the evidence is (e.g., concrete numbers, "
-    "   equations, empirical results, or precise definitions vs. only vague or high-level mentions).\n"
-    "5) Scoring Rubric (1-10):\n"
-    "   - 1-2: No meaningful relation to the question; almost entirely irrelevant.\n"
-    "   - 3-4: Very weak relation; only sparse or vague connections to the question.\n"
-    "   - 5-6: Partially relevant; some useful evidence but limited coverage or specificity.\n"
-    "   - 7-8: Strong relevance; substantial evidence that meaningfully supports answering the question.\n"
-    "   - 9-10: Highly focused and densely relevant; most of the excerpt is directly useful for the question.\n"
-    "6) Final Check: Choose the score that best reflects both the amount and strength of relevant evidence, "
-    "   being consistent with the rubric across all examples.\n\n"
-    "At the end of your response:\n"
-    "• First, provide the relevant information summary.\n"
-    "• Then, on a new line, provide ONLY an integer relevance score from 1-10 (no explanation).\n\n"
-    "Relevant Information Summary ({summary_length}):"
-)
+

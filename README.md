@@ -249,7 +249,7 @@ Evaluate your RAG system's performance using the comprehensive RAGAS evaluation 
 
 ```bash
 # Run evaluation with default settings
-python -m rag.evaluation.ragas.run_eval --dataset data/evaluation/dataset.json --max-samples 50
+python -m rag.evaluation.ragas.run_eval --use-default-preferences --dataset data/evaluation/dataset-preferenced.json --max-samples 50
 ```
 
 #### Advanced Evaluation Options
