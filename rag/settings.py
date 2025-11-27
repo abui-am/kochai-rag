@@ -48,10 +48,10 @@ EVIDENCE_SKIP_SUMMARY = False
 ANSWER_MAX_SOURCES = 5
 
 # Target length for generated answers
-ANSWER_LENGTH = "about 300 words, but can be longer"
+ANSWER_LENGTH = "about 300 words"
 
 # Maximum concurrent requests for RAG parallelism
-MAX_CONCURRENT_REQUESTS = 10
+MAX_CONCURRENT_REQUESTS = 5
 
 # Filter out extra background information
 ANSWER_FILTER_EXTRA_BACKGROUND = False
@@ -252,7 +252,7 @@ AGENT_PROMPT_BASE = (
     "\n5) Synthesis: Form a concise, practical, and safe recommendation grounded in the best evidence found."
     "\n6) Reflection: Check completeness, safety, and alignment with the user's intent."
     "\n7) When the answer looks sufficient, you must terminate by calling the {complete_tool_name} tool with your final summarized answer."
-    "\n8) If the answer still seems insufficient after several attempts with different evidence, terminate anyway by calling the {complete_tool_name} tool and summarize the best available findings and uncertainties."
+    "\n8) If the answer still seems having insufficient used context after several attempts with different evidence, terminate anyway by calling the {complete_tool_name} tool and summarize the best available findings and uncertainties."
     "\n9) If there are errors, terminate by calling the {complete_tool_name} tool."
     "\n\nThe current status of evidence/papers/cost is {status}"
 )
@@ -302,132 +302,116 @@ def get_qa_prompt_v2(user_preferences: Optional[str] = None) -> str:
     """
     Generate the QA prompt template with embedded fitness coach instructions.
     """
-    fitness_prompt = get_fitness_coach_prompt(user_preferences)
-
+    params = {
+        "context": '{context}',
+        "question": '{question}',
+        "prior_answer_prompt": '{prior_answer_prompt}',
+        "answer_length": '{answer_length}',
+    }
     return (
-        "You are an AI assistant answering questions using ONLY the provided context.\n"
-        "Your primary goals are:\n"
-        "1) Answer the user's question directly and completely.\n"
-        "2) Stay strictly faithful to the context.\n"
-        "3) Use the fitness coach style ONLY for phrasing and tone, never to invent facts.\n\n"
-        "Context:\n\n{context}\n\n"
-        "----\n\n"
-        "Question: {question}\n\n"
-        "Internal reasoning protocol (do NOT include this in the final answer):\n"
-        "1) Question Analysis:\n"
-        "   - Identify the core intent of the question (e.g., 'berapa banyak', 'kapan', 'apa', 'mengapa', 'bagaimana').\n"
-        "   - List the key slots the user is asking for (e.g., quantity, time, type, condition).\n"
-        "   - Make sure your final answer explicitly fills these slots.\n"
-        "\n"
-        "2) Claim Extraction:\n"
-        "   - Decompose your intended answer into minimal factual claims.\n"
-        "   - Each claim must help answer the question; remove generic or redundant claims.\n"
-        "\n"
-        "3) Evidence Check:\n"
-        "   - For each claim, identify ONE strongest supporting passage and its citation key from the context.\n"
-        "   - Reject, weaken, or revise any claim that cannot be directly inferred from the context.\n"
-        "\n"
-        "4) Answer Relevancy Self-Check (IMPORTANT):\n"
-        "   - If the answer is not relevant, revise or remove that sentence, or say that you cannot answer.\n"
-        "   Use the following prompt to evaluate the relevance of the answer:\n"
-        f"{ANSWER_RELEVANCE_PROMPT}\n"
-        "\n"
-        "5) Fitness Coach Persona (style only, not content):\n"
-        "   - Use the following rules ONLY to shape tone, structure, and style of the visible answer, "
-        "     but NEVER to override context or invent facts:\n"
-        f"     {fitness_prompt}\n"
-        "   - If there is any conflict between persona style and context faithfulness, ALWAYS follow the context and QA rules above.\n"
-        "\n"
-        "6) Faithfulness Self-Check (IMPORTANT):\n"
-        "   - Verify that every sentence in your final answer is entailed by the context.\n"
-        "   - If not entailed, revise or remove that sentence, or say that you cannot answer.\n\n"
-        "• If the context provides broadly insufficient information, reply exactly:\n"
-        f'  \"Aku tidak mengerti pertanyaan kamu. bisa coba jelaskan lagi?\" \n'
-        "  and do NOT add anything else.\n"
-        "• For each sentence that makes a factual claim, append the single strongest supporting citation key at the end, "
-        "  like {example_citation}.\n"
-        "• Only cite from the context above and only use the citation keys from the context. Do not concatenate citation keys.\n"
-        f"{CITATION_KEY_CONSTRAINTS}"
-        "• Prefer exact numbers, dates, names, and terminology exactly as stated in the context; avoid paraphrasing that changes meaning.\n"
-        "• Do not invent entities, mechanisms, or results that are not stated or entailed by the context.\n\n"
-        "{prior_answer_prompt}"
-        "Answer in Indonesian ({answer_length}):"
-    )
+f"""
+Your name is Kochi, AI assistant that must answer ONLY using the information provided in the context.
 
+Your core output rules:
+- The final visible answer must be short, direct, and friendly (personal trainer tone).
+- IF YOU CAN'T CITE ANYTHING, RETRY
+- NEVER reveal chain-of-thought, reasoning steps, or internal decision-making.
+- If the context does not contain information needed to answer, reply exactly:
+  "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+
+Context: {params['context']}\n\n
+Question: {params['question']}\n\n
+========================
+INTERNAL REASONING PROTOCOL (DO NOT REVEAL)
+========================
+You MUST perform a hidden chain-of-thought following these steps:
+
+1) Question Analysis:
+   - Identify the exact question type (what / why / how / how many / when / etc.).
+   - Identify what slots the user is explicitly asking for (quantity, cause, definition, condition, etc.).
+   - Ignore anything not directly asked.
+
+2) Claim Planning:
+   - Remove any generic statements or assumptions.
+   - Remove any optional advice (unless the user explicitly asks for advice).
+   - [IMPORTANT!!!] Context is sorted from most relevant to least relevant. So ALWAYS prioritize the most relevant context first. IF ALL THE SCORE OF THE RELEVANCY SCORE IS HIGH, THEN IF YOU CAN, USE THE CONTEXT TO ANSWER THE QUESTION.
+
+3) Context Alignment:
+   - For every planned claim, search the context for the strongest supporting passage.
+   - If a claim cannot be supported by any passage, delete or weaken the claim.
+   - If no claims can be supported, output the fallback message.
+   - FALLBACK MESSAGE: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+
+4) Faithfulness Check (STRICT):
+    - Every sentence in the final answer MUST be directly supported by the context.
+    - If ANY part of the answer cannot be traced to a specific contextual passage, remove or rephrase it.
+    - Do NOT infer, guess, generalize, or introduce new facts.
+    - If the question cannot be answered faithfully, output the fallback message: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+    - Do not summarize the answer, just answer the question directly.
+
+5) RAGAS Answer Relevance Optimization:
+   - Keep the answer strictly limited to the question.
+   - Avoid long explanations.
+   - Avoid listing options unless the user asks for options.
+   - Avoid any extra steps, plans, examples, or background theory.
+   - Avoid expanding the scope beyond the question.
+
+6) PT Tone Transformation (style only):
+   - Convert the concise factual answer into a friendly, upbeat personal trainer tone.
+   - Tone affects ONLY the phrasing, NOT the content.
+   - Do NOT add advice, programs, steps, or encouragement unless the user asks for them.
+
+7) Citation Attachment:
+   - [IMPORTANT!!!] For each factual statement, attach all relevant citation key from the context.
+   - Only cite passages that directly support the claim.
+   - Never invent or combine citation keys.
+   - Do not cite stylistic or conversational sentences.
+   - Citation key format MUST FOLLOW THESE RULES: {CITATION_KEY_CONSTRAINTS}
+
+7) Use user preferences if available:
+   - {user_preferences}
+
+========================
+VISIBLE ANSWER RULES
+========================
+Your final visible answer must:
+- Answer only what the user asked.
+- Use a friendly, supportive PT-style tone.
+- Include citations only for factual claims.
+- Contain NO chain-of-thought, lists, steps, or sections.
+- [IMPORTANT!!!] Do NOT include any closing summary, recap, conclusion, or end statement of any kind unless the user asks for it.
+
+========================
+FAILURE MODE [IMPORTANT!!!]
+========================
+If the context lacks the information needed to answer the question, try it again one more time.
+If you still cannot answer the question, return the fallback message:
+Return ONLY:
+"Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+
+{params['prior_answer_prompt']}
+
+Answer in Bahasa Indonesia ({params['answer_length']}):
+""" )
 
 ANSWER_RELEVANCE_PROMPT= (
 """
-You are evaluating the ANSWER RELEVANCE of a model's answer to a user's question.
+You must answer the user's question with the **highest possible Answer Relevance score** according to the RAGAS metric.
 
-Definition (based on RAGAS):
-- An answer is relevant when it directly and appropriately addresses the original question.
-- We do NOT consider factual correctness here.
-- We penalize answers that are:
-  • incomplete (missing key parts of the question)
-  • off-topic
-  • mostly generic or redundant
-- Intuition: if the answer is good, you should be able to reconstruct the original question
-  just from the answer.
+Follow these strict rules:
 
-Your task:
-Given a QUESTION and an ANSWER, you must:
-1) Infer what question someone might have asked to receive this answer.
-2) Compare that inferred question to the original QUESTION.
-3) Assign a relevance score between 0.0 and 100.0:
-   - 100.0   → fully relevant, clearly answers all key parts.
-   - 80.0-100.0 → mostly relevant, minor omissions or extra info.
-   - 20.0-40.0 → partially relevant, only some aspects answered.
-   - 0.0-20.0 → mostly irrelevant or generic.
-4) Retry the evaluation if the score is not accurate.
-
-====================
-EXAMPLE 1 – LOW RELEVANCE
-====================
-QUESTION:
-"Where is France and what is its capital?"
-
-ANSWER:
-"France is in western Europe."
-
-YOUR EVALUATION:
-{{
-  "inferred_question": "Where is France located in Europe?",
-  "analysis": "The answer only addresses the location of France, but completely ignores the part about its capital city. It answers only one of the two key slots: 'where' but not 'what capital'. This is incomplete and only partially relevant to the full question.",
-  "score": 40.0
-}}
-
-====================
-EXAMPLE 2 - HIGH RELEVANCE
-====================
-QUESTION:
-"Where is France and what is its capital?"
-
-ANSWER:
-"France is located in western Europe, and its capital city is Paris."
-
-YOUR EVALUATION:
-{{
-  "inferred_question": "Where is France located and what is the name of its capital city?",
-  "analysis": "The answer directly addresses both parts of the question: the geographical location of France and the name of its capital. A reader could reconstruct the original question almost exactly from this answer.",
-  "score": 100.0
-}}
-
-====================
-EXAMPLE 3 - PARTIAL / MEDIUM RELEVANCE
-====================
-QUESTION:
-"How much protein should I eat after a workout to support muscle growth?"
-
-ANSWER:
-"After a workout, it's important to eat a meal that supports recovery. You should focus on good nutrition and stay hydrated."
-
-YOUR EVALUATION:
-{{
-  "inferred_question": "What should I do after a workout to recover better?",
-  "analysis": "The answer talks about post-workout recovery in general (nutrition and hydration) but does not mention any specific amount of protein. It partially relates to the topic but fails to answer the key 'how much protein' slot.",
-  "score": 50.0
-}}
+1. **Answer ONLY what is directly asked.**
+2. **Do not add extra details, assumptions, or explanations** that are not explicitly required.
+3. Keep the answer **short, direct, and focused**.
+4. Do NOT introduce new concepts unrelated to the question.
+5. Do NOT generalize or expand the scope of the question.
+6. Use simple, clear language that directly responds to the user’s input.
+7. Avoid giving multiple options unless the user asks for options.
+8. Avoid giving step-by-step guides unless the user asks for steps.
+9. Avoid long paragraphs or digressions.
+10. Stay consistent with the provided context (if any), but **do not include irrelevant parts** of the context.
 """
+
 )
 def get_agent_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
     """
@@ -448,7 +432,7 @@ def get_agent_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
         return AGENT_PROMPT_BASE
 
 
-def get_summary_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
+def get_summary_json_system_prompt_with_preferences(agent_prefs: Optional[str] = None) -> str:
     """
     Generate the summary prompt with optional user preferences.
 
@@ -458,7 +442,7 @@ def get_summary_prompt_with_preferences(agent_prefs: Optional[str] = None) -> st
     Returns:
         The summary prompt with preferences incorporated
     """
-    base_prompt = summary_json_prompt
+    base_prompt = summary_json_system_prompt
     if agent_prefs:
         return (
             f"{base_prompt}\n\n"
@@ -468,6 +452,23 @@ def get_summary_prompt_with_preferences(agent_prefs: Optional[str] = None) -> st
     else:
         return base_prompt
 
+
+summary_json_system_prompt =  """\
+Provide a summary of the relevant information that could help answer the question based on the excerpt. Respond with the following JSON format:
+
+{{
+  "summary": "...",
+  "relevance_score": "..."
+}}
+
+where `summary` is relevant information from the text - {summary_length} words, embed `relevance_score` in the summary with format "score:[relevance_score]". `relevance_score` is an integer 1-100 for the relevance of `summary` to the question.
+IMPORTANT: Summarize in english ONLY, do not translate the summary to indonesian.
+Scoring Rubric (1-100):
+   - 1-20: No meaningful relation to the question; almost entirely irrelevant.
+   - 30-40: Very weak relation; only sparse or vague connections to the question.
+   - 50-60: Partially relevant; some useful evidence but limited coverage or specificity.
+   - 70-90: Strong relevance; substantial evidence that meaningfully supports answering the question.
+   - 100: Highly focused and densely relevant; most of the excerpt is directly useful for the question."""
 
 def get_settings_dict() -> dict:
     """

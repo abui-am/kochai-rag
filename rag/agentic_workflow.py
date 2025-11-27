@@ -59,8 +59,8 @@ class FitnessKnowledgeSystem:
         settings = Settings(
             paper_directory=self.docs_dir,
         )
-        settings.agent.max_timesteps = 6
-        settings.agent.search_count = 2
+        settings.agent.max_timesteps = 12
+        settings.agent.search_count = 1
         # settings.agent.agent_type = "fake"
         # settings.agent.agent_type = "fake"
         # settings.batch_size
@@ -74,7 +74,6 @@ class FitnessKnowledgeSystem:
         settings.answer.evidence_skip_summary = rag_settings.EVIDENCE_SKIP_SUMMARY
 
         # Answer generation settings from rag.settings
-        settings.answer.evidence_relevance_score_cutoff = 70
         settings.answer.answer_max_sources = rag_settings.ANSWER_MAX_SOURCES
         settings.answer.answer_length = rag_settings.ANSWER_LENGTH
         settings.answer.max_concurrent_requests = rag_settings.MAX_CONCURRENT_REQUESTS
@@ -86,24 +85,8 @@ class FitnessKnowledgeSystem:
 
         # Paper selection prompt from rag.settings
         settings.prompts.select = rag_settings.build_select_paper_prompt(agent_prefs)
-        settings.prompts.summary_json_system =  """\
-Provide a summary of the relevant information that could help answer the question based on the excerpt. Respond with the following JSON format:
+        settings.prompts.summary_json_system = rag_settings.get_summary_json_system_prompt_with_preferences(agent_prefs)
 
-{{
-  "summary": "...",
-  "relevance_score": "..."
-}}
-
-where `summary` is relevant information from the text - {summary_length} words. `relevance_score` is an integer 1-100 for the relevance of `summary` to the question. Summarize in english.
-
-Scoring Rubric (1-100):
-   - 1-20: No meaningful relation to the question; almost entirely irrelevant.
-   - 30-40: Very weak relation; only sparse or vague connections to the question.
-   - 50-60: Partially relevant; some useful evidence but limited coverage or specificity.
-   - 70-90: Strong relevance; substantial evidence that meaningfully supports answering the question.
-   - 100: Highly focused and densely relevant; most of the excerpt is directly useful for the question."""
-
-        settings.prompts.summary_json = rag_settings.get_summary_prompt_with_preferences(agent_prefs)
         # LLM models from rag.settings
         settings.llm = rag_settings.PRIMARY_LLM
         settings.agent.agent_llm = rag_settings.AGENT_LLM
@@ -117,11 +100,11 @@ Scoring Rubric (1-100):
 
         # Agent prompt with user preferences
         settings.agent.agent_prompt = rag_settings.get_agent_prompt_with_preferences(agent_prefs)
-
-
         # QA prompt from rag.settings
         settings.prompts.qa = rag_settings.get_qa_prompt_v2(user_preferences=agent_prefs)
-        # settings.verbosity = 0
+        # print(settings.prompts.qa, "AGENT_PROMPT")
+
+        # settings.verbosity = 3
         logger.info("Settings created with agent_prefs: %s", agent_prefs)
         return settings
     

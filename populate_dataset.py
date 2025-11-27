@@ -16,6 +16,7 @@ from typing import Any, Dict, List, Optional
 sys.path.append(str(Path(__file__).parent))
 
 from rag.agentic_workflow import FitnessKnowledgeSystem
+from rag.vanilla_workflow import VanillaFitnessSystem, create_vanilla_fitness_system
 from rag.evaluation.ragas.adapters import extract_answer_and_contexts
 from rag.evaluation.preferences import load_preferences
 
@@ -47,64 +48,92 @@ def load_existing_dataset(dataset_file: Path) -> List[Dict[str, Any]]:
     logger.info("Creating new dataset file")
     return []
 
-async def query_rag_system(
-    system: FitnessKnowledgeSystem, question: str, preferences: Optional[str] = None
+async def query_system(
+    system, question: str, preferences: Optional[str] = None, vanilla: bool = False
 ) -> Dict[str, Any]:
-    """Query the RAG system for a single question."""
+    """Query the system (RAG or vanilla) for a single question."""
     try:
-        answer_response = await system.query(question, preferences=preferences)
-
-        if answer_response and hasattr(answer_response, 'session') and answer_response.session:
-            answer_text, contexts, context_ids = extract_answer_and_contexts(answer_response)
+        if vanilla:
+            # Vanilla system returns dict directly
+            answer_response = await system.query(question, preferences=preferences)
+            answer_text = answer_response.get("answer", "")
 
             return {
                 "question": question,
                 "ground_truth": answer_text,
-                "contexts": contexts,
-                "context_ids" : context_ids,
                 "status": "success",
                 "preferences": preferences,
             }
         else:
-            logger.warning(f"No valid response for question: {question}")
+            # RAG system returns AnswerResponse object
+            answer_response = await system.query(question, preferences=preferences)
+
+            if answer_response and hasattr(answer_response, 'session') and answer_response.session:
+                answer_text, contexts, context_ids = extract_answer_and_contexts(answer_response)
+
+                return {
+                    "question": question,
+                    "ground_truth": answer_text,
+                    "contexts": contexts,
+                    "context_ids" : context_ids,
+                    "status": "success",
+                    "preferences": preferences,
+                }
+            else:
+                logger.warning(f"No valid response for question: {question}")
+                return {
+                    "question": question,
+                    "ground_truth": "Tidak dapat menghasilkan jawaban untuk pertanyaan ini.",
+                    "contexts": [],
+                    "context_ids": [],
+                    "status": "error",
+                    "preferences": preferences,
+                }
+
+    except Exception as e:
+        logger.error(f"Error querying system for '{question}': {e}")
+        error_msg = f"Error: {str(e)}"
+        if vanilla:
             return {
                 "question": question,
-                "ground_truth": "Tidak dapat menghasilkan jawaban untuk pertanyaan ini.",
+                "ground_truth": error_msg,
+                "status": "error",
+                "preferences": preferences,
+            }
+        else:
+            return {
+                "question": question,
+                "ground_truth": error_msg,
                 "contexts": [],
                 "context_ids": [],
                 "status": "error",
                 "preferences": preferences,
             }
 
-    except Exception as e:
-        logger.error(f"Error querying RAG system for '{question}': {e}")
-        return {
-            "question": question,
-            "ground_truth": f"Error: {str(e)}",
-            "contexts": [],
-            "context_ids": [],
-            "status": "error",
-            "preferences": preferences,
-        }
-
 async def populate_dataset(
     questions: List[str],
     dataset_file: Path,
     preferences: Optional[str] = None,
+    vanilla: bool = False,
 ) -> None:
-    """Populate dataset with RAG answers for all questions."""
-    # Initialize RAG system
-    logger.info("Initializing Fitness Knowledge System...")
-    system = FitnessKnowledgeSystem(
-        docs_dir="./data/sources/processed",
-        openai_api_key=os.getenv("OPENAI_API_KEY"),
-        auto_index=True
-    )
+    """Populate dataset with answers for all questions."""
+    if vanilla:
+        # Initialize vanilla system
+        logger.info("Initializing Vanilla Fitness System...")
+        system = await create_vanilla_fitness_system()
+    else:
+        # Initialize RAG system
+        logger.info("Initializing Fitness Knowledge System...")
+        system = FitnessKnowledgeSystem(
+            docs_dir="./data/sources/processed",
+            openai_api_key=os.getenv("OPENAI_API_KEY"),
+            auto_index=True
+        )
 
-    # Build index if needed
-    if system.has_documents():
-        logger.info("Building index...")
-        await system.build_index()
+        # Build index if needed
+        if system.has_documents():
+            logger.info("Building index...")
+            await system.build_index()
 
     # Load existing dataset
     existing_data = load_existing_dataset(dataset_file)
@@ -122,7 +151,7 @@ async def populate_dataset(
             logger.info(f"Question already exists, skipping: {question}")
             continue
 
-        result = await query_rag_system(system, question, preferences=preferences)
+        result = await query_system(system, question, preferences=preferences, vanilla=vanilla)
         results.append(result)
 
     # Combine existing data with new results
@@ -147,6 +176,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--preferences-text", type=str, help="Inline user preference block applied to every question.")
     parser.add_argument("--preferences-file", type=str, help="Path to a JSON or plain text file describing preferences.")
     parser.add_argument("--use-default-preferences", action="store_true", help="Apply the bundled dummy preference profile.")
+    parser.add_argument("--vanilla", action="store_true", help="Use vanilla (non-RAG) queries instead of RAG queries.")
     return parser.parse_args()
 
 
@@ -174,15 +204,24 @@ def main():
         output_dataset = output_dataset.with_name(
             f"{output_dataset.stem}-preferenced{output_dataset.suffix}"
         )
+    if args.vanilla:
+        output_dataset = output_dataset.with_name(
+            f"{output_dataset.stem}-vanilla{output_dataset.suffix}"
+        )
 
     if preferences:
         logger.info("Applying shared user preferences to all questions:\n%s", preferences)
     else:
         logger.info("Running without user preferences (baseline).")
 
+    if args.vanilla:
+        logger.info("Using vanilla (non-RAG) queries.")
+    else:
+        logger.info("Using RAG queries.")
+
     # Run the population
     logger.info("Writing dataset to %s", output_dataset)
-    asyncio.run(populate_dataset(questions, output_dataset, preferences=preferences))
+    asyncio.run(populate_dataset(questions, output_dataset, preferences=preferences, vanilla=args.vanilla))
 
 if __name__ == "__main__":
     main()

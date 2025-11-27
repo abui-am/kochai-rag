@@ -82,11 +82,14 @@ fitness-rag/
 │   └── database.py              # Database operations and models
 ├── rag/                         # RAG system core
 │   ├── agentic_workflow.py      # PaperQA integration and knowledge system
+│   ├── vanilla_workflow.py      # Vanilla (non-RAG) query system
+│   ├── utils.py                 # Shared utility functions
 │   ├── settings.py              # Configuration and model settings
 │   └── evaluation/              # Evaluation framework
 │       ├── preferences.py       # User preference handling
 │       └── ragas/               # RAGAS evaluation
-│           ├── run_eval.py      # Evaluation runner
+│           ├── run_eval.py      # RAG evaluation runner
+│           ├── run_eval_vanilla.py # Vanilla evaluation runner
 │           ├── adapters.py      # RAGAS adapters
 │           └── dataset_loader.py # Dataset loading utilities
 ├── config/                      # Configuration files
@@ -139,9 +142,10 @@ The system employs a sophisticated hybrid approach that intelligently combines:
 
 ### Core Architecture
 
-- **Vanilla LLM Base**: Provides conversational, engaging responses in Indonesian
-- **RAG Enhancement**: Adds scientific accuracy through document retrieval
+- **Vanilla LLM Base**: Direct GPT queries for conversational, engaging responses in Indonesian
+- **RAG Enhancement**: Adds scientific accuracy through document retrieval and citation
 - **Intelligent Merging**: Seamlessly integrates research facts into natural conversation
+- **Modular Design**: Separate vanilla and RAG workflows for flexible evaluation and comparison
 
 ### Key Benefits
 
@@ -183,8 +187,8 @@ The API will be available at `http://localhost:8000` with automatic API document
 
 #### Query Endpoints
 
-- `POST /query` - Main RAG query with PaperQA document analysis
-- `POST /query/vanilla` - Direct GPT query without RAG (for comparison)
+- `POST /query` - Main RAG query with PaperQA document analysis and scientific citations
+- `POST /query/vanilla` - Direct GPT query without RAG (for baseline comparison)
 
 ### Example API Usage
 
@@ -248,59 +252,105 @@ Evaluate your RAG system's performance using the comprehensive RAGAS evaluation 
 #### Quick Evaluation
 
 ```bash
-# Run evaluation with default settings
+# Run RAG evaluation with default settings
 python -m rag.evaluation.ragas.run_eval --use-default-preferences --dataset data/evaluation/dataset-preferenced.json --max-samples 50
+
+# Run vanilla (non-RAG) evaluation
+python -m rag.evaluation.ragas.run_eval_vanilla --use-default-preferences --dataset data/evaluation/dataset-preferenced-vanilla.json --max-samples 50
 ```
 
 #### Advanced Evaluation Options
 
 ```bash
-# With custom judge model
+# RAG evaluation with custom judge model
 python -m rag.evaluation.ragas.run_eval \
   --dataset data/evaluation/dataset.json \
   --model gpt-4o \
   --max-samples 100 \
   --use-default-preferences
 
-# With custom document directory
+# Vanilla evaluation with custom judge model
+python -m rag.evaluation.ragas.run_eval_vanilla \
+  --dataset data/evaluation/dataset.json \
+  --model gpt-4o \
+  --max-samples 100 \
+  --use-default-preferences
+
+# With custom document directory (RAG only)
 python -m rag.evaluation.ragas.run_eval \
   --dataset data/evaluation/dataset.json \
   --docs-dir ./custom_docs/ \
   --save-dir ./evaluation_results/
 ```
 
+#### Evaluation Types
+
+The system supports two evaluation modes:
+
+- **RAG Evaluation** (`run_eval.py`): Tests the full RAG pipeline with document retrieval, context analysis, and scientific citations. Uses multiple metrics (Context Relevance, Faithfulness, Answer Relevancy, etc.)
+
+- **Vanilla Evaluation** (`run_eval_vanilla.py`): Tests direct LLM responses without document retrieval. Uses only Answer Relevancy metric for focused evaluation of conversational quality.
+
 #### Evaluation Outputs
 
 - `data/evaluation/results/<timestamp>/per_sample.csv` - Individual sample results
 - `data/evaluation/results/<timestamp>/aggregate.json` - Overall metrics and scores
+- `vanilla_evaluation_dataset.json` - Generated vanilla evaluation dataset
+- `vanilla_settings_report_<timestamp>.json` - Vanilla evaluation configuration and results
 
 ### Dataset Management
 
 #### Generate Evaluation Datasets
 
 ```bash
-# Basic dataset without preferences
+# Basic RAG dataset without preferences
 python populate_dataset.py
 
-# Dataset with custom preferences
+# Vanilla (non-RAG) dataset without preferences
+python populate_dataset.py --vanilla
+
+# RAG dataset with custom preferences
 python populate_dataset.py --preferences-text "- Goal: muscle_gain\n- Equipment: resistance bands"
 
-# Dataset with default preferences
+# Vanilla dataset with custom preferences
+python populate_dataset.py --vanilla --preferences-text "- Goal: muscle_gain\n- Equipment: resistance bands"
+
+# RAG dataset with default preferences
 python populate_dataset.py --use-default-preferences
+
+# Vanilla dataset with default preferences
+python populate_dataset.py --vanilla --use-default-preferences
 ```
 
 #### Dataset Format
 
-The evaluation expects JSON datasets in this format:
+The system supports two dataset formats:
+
+**RAG Dataset Format:**
 
 ```json
 [
   {
     "question": "What are the benefits of compound exercises?",
-    "expected_answer": "Compound exercises work multiple muscle groups simultaneously..."
+    "ground_truth": "Compound exercises work multiple muscle groups simultaneously...",
+    "contexts": ["Context 1...", "Context 2..."],
+    "context_ids": ["doc1.pdf", "doc2.pdf"]
   }
 ]
 ```
+
+**Vanilla Dataset Format:**
+
+```json
+[
+  {
+    "question": "What are the benefits of compound exercises?",
+    "ground_truth": "Compound exercises work multiple muscle groups simultaneously..."
+  }
+]
+```
+
+Vanilla datasets are simpler with only question and ground_truth fields.
 
 ### Testing Scripts
 

@@ -9,7 +9,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field, field_validator
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from openai import AsyncOpenAI
 
 from api.auth_utils import User, get_current_user, create_access_token, authenticate_user
 from api.auth_utils import SECRET_KEY, ALGORITHM
@@ -25,18 +24,11 @@ from api.auth_models import (
     ProfileResponse, UserStats, LoginCredentials, LoginResponse
 )
 from rag.agentic_workflow import create_fitness_knowledge_system, FitnessKnowledgeSystem
+from rag.vanilla_workflow import create_vanilla_fitness_system, VanillaFitnessSystem
 from rag import settings as rag_settings
 
 # Load environment variables
 load_dotenv()
-
-VANILLA_MODEL_NAME = rag_settings.PRIMARY_LLM
-VANILLA_TEMPERATURE = float(os.getenv("VANILLA_TEMPERATURE", "0.2"))
-VANILLA_SYSTEM_PROMPT = (
-    "You are a supportive, certified Indonesian fitness coach. "
-    "Answer in Bahasa Indonesia with concise, actionable guidance.\n"
-    f"{rag_settings.get_fitness_coach_prompt()}"
-)
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -69,25 +61,25 @@ app.add_middleware(
 )
 
 fitness_system: Optional[FitnessKnowledgeSystem] = None
-vanilla_client: Optional[AsyncOpenAI] = None
+vanilla_system: Optional[VanillaFitnessSystem] = None
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize the fitness knowledge system and database on startup."""
-    global fitness_system, vanilla_client
+    global fitness_system, vanilla_system
     try:
         await init_db()
 
         fitness_system = await create_fitness_knowledge_system(auto_index=True)
     except Exception as e:
-        print(f"Failed to initialize system: {e}")
+        print(f"Failed to initialize RAG system: {e}")
         fitness_system = None
 
     try:
-        vanilla_client = AsyncOpenAI()
+        vanilla_system = await create_vanilla_fitness_system()
     except Exception as e:
-        print(f"Failed to initialize system: {e}")
-        vanilla_client = None
+        print(f"Failed to initialize vanilla system: {e}")
+        vanilla_system = None
 
 class QueryRequest(BaseModel):
     """Request model for the query endpoint."""
@@ -505,78 +497,29 @@ async def query_vanilla(
     raw_request: Request
 ) -> Dict[str, Any]:
     """Process a GPT-only query for comparison against RAG responses."""
-    if vanilla_client is None:
+    if vanilla_system is None:
         raise HTTPException(
             status_code=503,
-            detail="Vanilla GPT client not ready. Check OPENAI_API_KEY configuration."
+            detail="Vanilla GPT system not ready. Check OPENAI_API_KEY configuration."
         )
 
     try:
         question_text = await _extract_vanilla_payload(raw_request)
-
-        db_prefs: Optional[str] = None
         user_id = _extract_user_id_from_request(raw_request)
+
+        # Get user preferences if user_id is available
+        preferences = None
         if user_id:
             try:
                 db_user = await get_user_by_id(user_id)
                 prefs_block = _format_user_preferences(db_user)
                 if prefs_block:
-                    db_prefs = prefs_block
+                    preferences = prefs_block
             except Exception:
                 pass
 
-        agent_prefs = db_prefs
-
-        vanilla_prompt = VANILLA_SYSTEM_PROMPT
-        user_prompt = question_text.strip()
-        if agent_prefs:
-            vanilla_prompt += f"\n\nPreferensi pengguna:\n{agent_prefs}"
-
-        response = await vanilla_client.responses.create(
-            model=VANILLA_MODEL_NAME,
-            temperature=VANILLA_TEMPERATURE,
-            input=[
-                {
-                    "role": "system",
-                    "content": [{"type": "input_text", "text": vanilla_prompt}],
-                },
-                {
-                    "role": "user",
-                    "content": [{"type": "input_text", "text": user_prompt}],
-                },
-                {
-                    "role" : "system",
-                    "content": [{"type": "input_text", "text": "Integrate Reasoning Summary, Action Plan, and Reflection Question into the answer seamlesly. Reject any question without fitness related context. Also please make the answer like conversation"}],
-                },
-
-            ],
-        )
-
-        answer_text = _extract_response_text(response)
-        if not answer_text:
-            raise HTTPException(
-                status_code=502,
-                detail="GPT returned an empty response"
-            )
-
-        usage_payload: Dict[str, Any] = {}
-        usage_obj = getattr(response, "usage", None)
-        if usage_obj is not None:
-            if hasattr(usage_obj, "model_dump"):
-                usage_payload = usage_obj.model_dump()
-            elif hasattr(usage_obj, "dict"):
-                usage_payload = usage_obj.dict()
-            else:
-                usage_payload = usage_obj  # type: ignore[assignment]
-
-        return {
-            "answer": answer_text,
-            "model": getattr(response, "model", VANILLA_MODEL_NAME),
-            "usage": usage_payload,
-            "query": question_text,
-            "status": "success",
-            "preferences": agent_prefs,
-        }
+        result = await vanilla_system.query(question_text, preferences)
+        return result
     except HTTPException:
         raise
     except Exception as e:
