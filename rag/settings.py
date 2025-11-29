@@ -317,7 +317,7 @@ Your core output rules:
 - IF YOU CAN'T CITE ANYTHING, RETRY
 - NEVER reveal chain-of-thought, reasoning steps, or internal decision-making.
 - If the context does not contain information needed to answer, reply exactly:
-  "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+  "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
 
 Context: {params['context']}\n\n
 Question: {params['question']}\n\n
@@ -340,13 +340,13 @@ You MUST perform a hidden chain-of-thought following these steps:
    - For every planned claim, search the context for the strongest supporting passage.
    - If a claim cannot be supported by any passage, delete or weaken the claim.
    - If no claims can be supported, output the fallback message.
-   - FALLBACK MESSAGE: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+   - FALLBACK MESSAGE: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
 
 4) Faithfulness Check (STRICT):
     - Every sentence in the final answer MUST be directly supported by the context.
     - If ANY part of the answer cannot be traced to a specific contextual passage, remove or rephrase it.
     - Do NOT infer, guess, generalize, or introduce new facts.
-    - If the question cannot be answered faithfully, output the fallback message: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+    - If the question cannot be answered faithfully, output the fallback message: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
 
 5) RAGAS Answer Relevance Optimization:
    - Keep the answer strictly limited to the question.
@@ -388,7 +388,7 @@ FAILURE MODE [IMPORTANT!!!]
 If the context lacks the information needed to answer the question, try it again one more time.
 If you still cannot answer the question, return the fallback message:
 Return ONLY:
-"Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi?"
+"Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context] or [possible question based on the context]"
 
 {params['prior_answer_prompt']}
 
