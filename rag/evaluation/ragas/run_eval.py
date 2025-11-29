@@ -128,12 +128,17 @@ def main() -> None:
         return await system.query(q, preferences=preferences_block)
 
     for item in rows:
+
         q = item["question"]
         gt = item.get("ground_truth")
         rc = item.get("reference_contexts")
         rcids = item.get("reference_context_ids")
         try:
             answer_response = asyncio.run(_ask(q))
+            if len(answer_response.session.used_contexts) == 0:
+                answer_response = asyncio.run(_ask(q))
+                if len(answer_response.session.used_contexts) == 0:
+                    answer_response = asyncio.run(_ask(q))
         except RuntimeError:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)

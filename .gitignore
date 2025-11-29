@@ -147,4 +147,5 @@ Thumbs.db
 .pqa/
 *.index
 
-data/
+data/evaluation/results/
+data/sources/processed/
