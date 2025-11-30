@@ -9,7 +9,7 @@ making it easy to:
 
 from typing import Optional
 
-from paperqa.prompts import CITATION_KEY_CONSTRAINTS, summary_json_prompt, summary_prompt
+from paperqa.prompts import CANNOT_ANSWER_PHRASE, CITATION_KEY_CONSTRAINTS, summary_json_prompt, summary_prompt
 
 # ============================================================================
 # MODEL CONFIGURATION
@@ -302,98 +302,25 @@ def get_qa_prompt_v2(user_preferences: Optional[str] = None) -> str:
     """
     Generate the QA prompt template with embedded fitness coach instructions.
     """
-    params = {
-        "context": '{context}',
-        "question": '{question}',
-        "prior_answer_prompt": '{prior_answer_prompt}',
-        "answer_length": '{answer_length}',
-    }
     return (
-f"""
-Your name is Kochi, AI assistant that must answer ONLY using the information provided in the context.
-
-Your core output rules:
-- The final visible answer must be short, direct, and friendly (personal trainer tone).
-- IF YOU CAN'T CITE ANYTHING, RETRY
-- NEVER reveal chain-of-thought, reasoning steps, or internal decision-making.
-- If the context does not contain information needed to answer, reply exactly:
-  "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
-
-Context: {params['context']}\n\n
-Question: {params['question']}\n\n
-========================
-INTERNAL REASONING PROTOCOL (DO NOT REVEAL)
-========================
-You MUST perform a hidden chain-of-thought following these steps:
-
-1) Question Analysis:
-   - Identify the exact question type (what / why / how / how many / when / etc.).
-   - Identify what slots the user is explicitly asking for (quantity, cause, definition, condition, etc.).
-   - Ignore anything not directly asked.
-
-2) Claim Planning:
-   - Remove any generic statements or assumptions.
-   - Remove any optional advice (unless the user explicitly asks for advice).
-   - [IMPORTANT!!!] Context is sorted from most relevant to least relevant. So ALWAYS prioritize the most relevant context first. IF ALL THE SCORE OF THE RELEVANCY SCORE IS HIGH, THEN IF YOU CAN, USE THE CONTEXT TO ANSWER THE QUESTION.
-
-3) Context Alignment:
-   - For every planned claim, search the context for the strongest supporting passage.
-   - If a claim cannot be supported by any passage, delete or weaken the claim.
-   - If no claims can be supported, output the fallback message.
-   - FALLBACK MESSAGE: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
-
-4) Faithfulness Check (STRICT):
-    - Every sentence in the final answer MUST be directly supported by the context.
-    - If ANY part of the answer cannot be traced to a specific contextual passage, remove or rephrase it.
-    - Do NOT infer, guess, generalize, or introduce new facts.
-    - If the question cannot be answered faithfully, output the fallback message: "Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]"
-
-5) RAGAS Answer Relevance Optimization:
-   - Keep the answer strictly limited to the question.
-   - Avoid long explanations.
-   - Avoid listing options unless the user asks for options.
-   - Avoid any extra steps, plans, examples, or background theory.
-   - Avoid expanding the scope beyond the question.
-
-6) PT Tone Transformation (style only):
-   - Convert the concise factual answer into a friendly, upbeat personal trainer tone.
-   - Tone affects ONLY the phrasing, NOT the content.
-   - Do NOT add advice, programs, steps, or encouragement unless the user asks for them.
-
-7) Citation Attachment:
-   - [IMPORTANT!!!] For each factual statement, attach exactly ONE relevant citation key from the context.
-   - Only cite passages that directly support the claim.
-   - Never invent or combine citation keys.
-   - Do not cite stylistic or conversational sentences.
-   - THIS IS VERY IMPORTANT!!! Citation key format MUST FOLLOW THESE RULES: {CITATION_KEY_CONSTRAINTS}
-    
-
-7) Use user preferences if available:
-   - {user_preferences}
-
-========================
-VISIBLE ANSWER RULES
-========================
-Your final visible answer must:
-- Answer only what the user asked.
-- Use a friendly, supportive PT-style tone.
-- Include citations only for factual claims.
-- Contain NO chain-of-thought, lists, steps, or sections.
-- Do NOT summarize or restate the context.
-- Do NOT produce an overview, this is very important!!!
-
-========================
-FAILURE MODE [IMPORTANT!!!]
-========================
-If the context lacks the information needed to answer the question, try it again one more time.
-If you still cannot answer the question, return the fallback message:
-Return ONLY:
-"Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context] or [possible question based on the context]"
-
-{params['prior_answer_prompt']}
-
-Answer in Bahasa Indonesia ({params['answer_length']}):
-""" )
+    "Answer the question below with the context.\n\n"
+    "Context:\n\n{context}\n\n----\n\n"
+    "Question: {question}\n\n"
+    f"My name adn preferences: {user_preferences}\n\n"
+    "Write an answer based on the context. "
+    "If the context provides insufficient information reply "
+    "Say 'Aku tidak mengerti pertanyaanmu. Bisa coba jelaskan lagi? atau tanyakan [possible question based on the context]' if the context provides insufficient information."
+    "For each part of your answer, indicate which sources most support "
+    "it via citation keys at the end of sentences, like {example_citation}. "
+    "Only cite from the context above and only use the citation keys from the context. "
+    f"{CITATION_KEY_CONSTRAINTS}"
+    "Do not concatenate citation keys, just use them as is. "
+    "Write in the style of a scientific article, with concise sentences and "
+    "coherent paragraphs. This answer will be used directly, "
+    "so do not add any extraneous information.\n\n"
+    "{prior_answer_prompt}"
+    "Answer ({answer_length}):"
+)
 
 ANSWER_RELEVANCE_PROMPT= (
 """
@@ -454,7 +381,7 @@ def get_summary_json_system_prompt_with_preferences(agent_prefs: Optional[str] =
         return base_prompt
 
 
-summary_json_system_prompt =  """\
+summary_json_system_prompt =  """
 Provide a summary of the relevant information that could help answer the question based on the excerpt. Respond with the following JSON format:
 
 {{
@@ -462,7 +389,7 @@ Provide a summary of the relevant information that could help answer the questio
   "relevance_score": "..."
 }}
 
-where `summary` is relevant information from the text - {summary_length} words, embed `relevance_score` in the summary with format "score:[relevance_score]". `relevance_score` is an integer 1-100 for the relevance of `summary` to the question.
+where `summary` is relevant information from the text - {summary_length} words, embed `relevance_score` in the summary with format "This information is relevant to the question with a score of [relevance_score]". `relevance_score` is an integer 1-100 for the relevance of `summary` to the question.
 IMPORTANT: Summarize in english ONLY, do not translate the summary to indonesian.
 Scoring Rubric (1-100):
    - 1-20: No meaningful relation to the question; almost entirely irrelevant.
@@ -511,6 +438,4 @@ def get_settings_dict() -> dict:
             "agent_search_count": AGENT_SEARCH_COUNT,
         },
     }
-
-
 
